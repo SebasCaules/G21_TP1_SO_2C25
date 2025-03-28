@@ -5,7 +5,7 @@
 #include <sys/mman.h>
 #include <unistd.h>
 #include <fcntl.h>
-
+#include <stdlib.h>
 
 typedef struct {
     char playerName[16]; // Nombre del jugador
@@ -35,59 +35,48 @@ typedef struct {
     unsigned int activeReaders; // Cantidad de jugadores leyendo el estado
 } Semaphores;
 
+#define SHM_STATE "/game_state"
+#define SHM_SYNC "/game_sync"
 
-int testSHM(char* name){
-    printf("[TEST] Intentando conectar a la memoria compartida '%s'\n", name);
+int main() {
 
-    // Paso 1: Abrir la memoria compartida
-    int fd = shm_open(name, O_RDONLY, 0);
-    if (fd == -1) {
-        perror("[ERROR] shm_open");
-        return 1;
+    // Abrir la primera shm
+    int fdState = shm_open(SHM_STATE, O_RDONLY, 0);
+    if (fdState == -1) {
+        perror("shm_open shm_state");
+        exit(EXIT_FAILURE);
     }
 
-    // Paso 2: Obtener el tamaño con fstat()
-    struct stat sb;
-    if (fstat(fd, &sb) == -1) {
-        perror("[ERROR] fstat");
-        close(fd);
-        return 1;
+    // Abrir la segunda shm
+    int fdSync = shm_open(SHM_SYNC, O_RDWR, 0);
+    if (fdSync == -1) {
+        perror("shm_open shm_sync");
+        exit(EXIT_FAILURE);
     }
 
-    size_t size = sb.st_size;
-    printf("[TEST] Tamaño detectado: %ld bytes\n", size);
+    // Obtener tamaño de cada shm
+    struct stat stateState, statSync;
+    fstat(fdState, &stateState);
+    fstat(fdSync, &statSync);
 
-    // Paso 3: Hacer mmap
-    char *ptr = mmap(NULL, size, PROT_READ, MAP_SHARED, fd, 0);
-    if (ptr == MAP_FAILED) {
-        perror("[ERROR] mmap");
-        close(fd);
-        return 1;
+    // Mapear ambas
+    Game *state = mmap(NULL, stateState.st_size, PROT_READ, MAP_SHARED, fdState, 0);
+    if (state == MAP_FAILED) {
+        perror("mmap shm_state");
+        exit(EXIT_FAILURE);
     }
 
-    sem_post(&((Semaphores*)ptr)->printNeeded);
-    // Paso 4: Mostrar contenido
-    printf("[TEST] Contenido leído desde la memoria:\n");
-    write(STDOUT_FILENO, ptr, size);
-    printf("\n");
-    sem_wait(&((Semaphores*)ptr)->printFinished);
-
-    // Paso 5: Limpieza
-    munmap(ptr, size);
-    close(fd);
-
-    printf("[TEST] Conexión exitosa ✅\n");
-}
-
-
-int main(int argc, char* argv[]) {
-    testSHM("/game_sync");
-    // testSHM("/game_state");
-
-    printf("nigga link activated\n");
-    for (int i = 0; i < argc; i++) {
-        printf(" arg %d %s\n",i, argv[i]);
+    Semaphores *sync = mmap(NULL, statSync.st_size, PROT_READ | PROT_WRITE, MAP_SHARED, fdSync, 0);
+    if (sync == MAP_FAILED) {
+        perror("mmap shm_sync");
+        exit(EXIT_FAILURE);
     }
+
+    // Limpieza
+    munmap(state, stateState.st_size);
+    munmap(sync, statSync.st_size);
+    close(fdState);
+    close(fdSync);
+
     return 0;
 }
-
