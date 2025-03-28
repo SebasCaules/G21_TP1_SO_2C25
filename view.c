@@ -83,7 +83,9 @@ int main(int argc, char *argv[]) {
         sem_wait(&sync->printNeeded);
         // Print the board
         printf("\033[H\033[J"); // Clear the terminal
-        printf("Iterations: %d\n", iterations++);
+        printf("Iterations: %d, 0 valid: %d, 0 invalid: %d, -1 valid: %d, -1 invalid: %d\n", iterations++, 
+               state->players[0].requestedValidMovements, state->players[0].requestedInvalidMovements,
+               state->players[1].requestedValidMovements, state->players[1].requestedInvalidMovements);
         printf("📋 Tablero (%dx%d):\n", width, height);
 
         for (int y = 0; y < height; y++) {
@@ -93,7 +95,6 @@ int main(int argc, char *argv[]) {
             }
             printf("\n");
         }
-        printf("Game finished: %d\n", state->hasFinished);
         // Signal that the printing is finished
         sem_post(&sync->printFinished);
     }

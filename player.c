@@ -42,6 +42,19 @@ typedef struct
 #define SHM_STATE "/game_state"
 #define SHM_SYNC "/game_sync"
 
+void calculateNewPosition(unsigned char moveRequest, unsigned short *newX, unsigned short *newY, unsigned short x, unsigned short y) {
+    switch (moveRequest) {
+        case 0: *newY = y - 1; *newX = x;     break; // Up
+        case 1: *newY = y - 1; *newX = x + 1; break; // Up-Right
+        case 2: *newY = y;     *newX = x + 1; break; // Right
+        case 3: *newY = y + 1; *newX = x + 1; break; // Down-Right
+        case 4: *newY = y + 1; *newX = x;     break; // Down
+        case 5: *newY = y + 1; *newX = x - 1; break; // Down-Left
+        case 6: *newY = y;     *newX = x - 1; break; // Left
+        case 7: *newY = y - 1; *newX = x - 1; break; // Up-Left
+    }
+}
+
 int main()
 {
 
@@ -124,7 +137,7 @@ int main()
         sem_wait(&sync->printFinished);
 
         // Wait for some time before the next move
-        usleep(500000); // 500 ms delay
+        usleep(1000000); // 500 ms delay
     }
 
     // Limpieza
