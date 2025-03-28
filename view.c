@@ -74,17 +74,29 @@ int main(int argc, char *argv[]) {
         perror("mmap shm_sync");
         exit(EXIT_FAILURE);
     }
-    
-    printf("📋 Tablero (%dx%d):\n", width, height);
 
-    for (int y = 0; y < height; y++) {
-        for (int x = 0; x < width; x++) {
-            int value = state->board[y * width + x]; // acceso lineal
-            printf("%4d", value);
+    int iterations = 0;
+
+    // Continuous loop to print the board
+    while (!state->hasFinished) {
+        // Wait for the signal that the board has been updated
+        sem_wait(&sync->printNeeded);
+        // Print the board
+        printf("\033[H\033[J"); // Clear the terminal
+        printf("Iterations: %d\n", iterations++);
+        printf("📋 Tablero (%dx%d):\n", width, height);
+
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                int value = state->board[y * width + x]; // acceso lineal
+                printf("%4d", value);
+            }
+            printf("\n");
         }
-        printf("\n");
+        printf("Game finished: %d\n", state->hasFinished);
+        // Signal that the printing is finished
+        sem_post(&sync->printFinished);
     }
-    
 
     // Limpieza
     munmap(state, stateState.st_size);
