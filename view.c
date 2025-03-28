@@ -15,16 +15,16 @@ typedef struct {
     unsigned short x, y; // Coordenadas x e y en el tablero
     pid_t pid; // Identificador de proceso
     bool isBlocked; // Indica si el jugador está bloqueado
-} PlayerProcess;
+} PlayerState;
 
 typedef struct {
     unsigned short width; // Ancho del tablero
     unsigned short height; // Alto del tablero
     unsigned int numOfPlayers; // Cantidad de jugadores
-    PlayerProcess players[9]; // Lista de jugadores
+    PlayerState players[9]; // Lista de jugadores
     bool hasFinished; // Indica si el juego se ha terminado
     int board[]; // Puntero al comienzo del tablero. fila-0, fila-1, ..., fila-n-1
-} Game;
+} GameState;
 
 typedef struct {
     sem_t printNeeded; // Se usa para indicarle a la vista que hay cambios por imprimir
@@ -38,7 +38,10 @@ typedef struct {
 #define SHM_STATE "/game_state"
 #define SHM_SYNC "/game_sync"
 
-int main() {
+int main(int argc, char *argv[]) {
+
+    int height = atoi(argv[1]);
+    int width = atoi(argv[2]);
 
     // Abrir la primera shm
     int fdState = shm_open(SHM_STATE, O_RDONLY, 0);
@@ -60,7 +63,7 @@ int main() {
     fstat(fdSync, &statSync);
 
     // Mapear ambas
-    Game *state = mmap(NULL, stateState.st_size, PROT_READ, MAP_SHARED, fdState, 0);
+    GameState *state = mmap(NULL, stateState.st_size, PROT_READ, MAP_SHARED, fdState, 0);
     if (state == MAP_FAILED) {
         perror("mmap shm_state");
         exit(EXIT_FAILURE);
@@ -71,19 +74,24 @@ int main() {
         perror("mmap shm_sync");
         exit(EXIT_FAILURE);
     }
+    
+    printf("📋 Tablero (%dx%d):\n", width, height);
 
-    while (!state->hasFinished) {
-        printf("hola\n");
-        fflush(stdout);
-        sleep(2);
+    for (int y = 0; y < height; y++) {
+        for (int x = 0; x < width; x++) {
+            int value = state->board[y * width + x]; // acceso lineal
+            printf("%4d", value);
+        }
+        printf("\n");
     }
+    
 
     // Limpieza
     munmap(state, stateState.st_size);
     munmap(sync, statSync.st_size);
     close(fdState);
     close(fdSync);
-    
+
 
     return 0;
 }
