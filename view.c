@@ -41,7 +41,7 @@ typedef struct {
 int iterations = 0;
 
 void printBoard(GameState *state, int height, int width) {
-    printf("📋 Tablero (%dx%d):\n", width, height);
+    printf("📋 Tablero (%dx%d) | %d jugadores\n", width, height, state->numOfPlayers);
     for (int y = 0; y < height; y++) {
         for (int x = 0; x < width; x++) {
             int value = state->board[y * width + x]; // acceso lineal
@@ -97,20 +97,17 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     }
 
-    // Continuous loop to print the board
     while (!state->hasFinished) {
-        // Wait for the signal that the board has been updated
         sem_wait(&sync->printNeeded);
-        printf("\033[H\033[J"); // Clear the terminal
+        printf("\033[H\033[J");
         for (int i = 0; i < state->numOfPlayers; i++) {
             printPlayerData(state->players[i]);
             printf("\n");
         }
         printBoard(state, height, width);
-        
-        // Signal that the printing is finished
         sem_post(&sync->printFinished);
     }
+
 
     // Limpieza
     munmap(state, stateState.st_size);

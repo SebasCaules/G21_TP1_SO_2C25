@@ -97,12 +97,16 @@ int main()
     }
 
 
-    // Continuous loop for player movement
     while (!state->hasFinished) {
-        // Lock the game state to find the player
+        sem_wait(&sync->readersCountMutex);
+        sync->activeReaders++;
+        if (sync->activeReaders == 1) {
+            sem_wait(&sync->writerEntryMutex);
+        }
+        sem_post(&sync->readersCountMutex);
+
         sem_wait(&sync->gameStateMutex);
 
-        // Find the player controlled by this process
         PlayerProcess *player = NULL;
         pid_t currentPid = getpid();
         for (int i = 0; i < state->numOfPlayers; i++) {
@@ -114,30 +118,29 @@ int main()
 
         if (player == NULL) {
             fprintf(stderr, "Error: No player found for process with PID %d\n", currentPid);
-            sem_post(&sync->gameStateMutex); // Unlock the game state
+            sem_post(&sync->gameStateMutex);
             exit(EXIT_FAILURE);
         }
 
-        sem_post(&sync->gameStateMutex); // Unlock the game state
-
-        // Generate a random move request (0-7)
         unsigned char moveRequest = rand() % 8;
 
-        // Send the move request to the master via pipe (write to fd 1)
         if (write(1, &moveRequest, sizeof(moveRequest)) == -1) {
             perror("write to pipe");
-            player->isBlocked = true; // Mark player as blocked if pipe fails
+            player->isBlocked = true;
+            sem_post(&sync->gameStateMutex);
             break;
         }
-        
-        // Notify the view that the board has been updated
-        sem_post(&sync->printNeeded);
 
-        // Wait for the view to finish printing
-        sem_wait(&sync->printFinished);
+        sem_post(&sync->gameStateMutex);
 
-        // Wait for some time before the next move
-        usleep(1000000); // 500 ms delay
+        sem_wait(&sync->readersCountMutex);
+        sync->activeReaders--;
+        if (sync->activeReaders == 0) {
+            sem_post(&sync->writerEntryMutex);
+        }
+        sem_post(&sync->readersCountMutex);
+
+        usleep(100000);
     }
 
     // Limpieza
