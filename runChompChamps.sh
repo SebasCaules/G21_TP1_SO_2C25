@@ -10,7 +10,7 @@ echo "✅ Compilación completa"
 
 # Ejecutar el binario oficial chompchamps
 echo "🚀 Ejecutando ChompChamps..."
-./ChompChamps -w 10 -h 10 -d 200 -t 10 -v ./view -p ./player ./player
+./ChompChamps -w 10 -h 10 -d 200 -t 10 -s 90 -v ./view -p ./player ./player
 
 # Limpieza
 echo "🧹 Borrando binarios player y view..."

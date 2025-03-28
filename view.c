@@ -75,15 +75,25 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     }
     
-    printf("📋 Tablero (%dx%d):\n", width, height);
+    while (!state->hasFinished) {
+        sem_wait(&sync->printNeeded);
 
-    for (int y = 0; y < height; y++) {
-        for (int x = 0; x < width; x++) {
-            int value = state->board[y * width + x]; // acceso lineal
-            printf("%4d", value);
+        printf("\033[2J\033[H"); // Limpiar pantalla
+        printf("📋 Tablero (%dx%d):\n", width, height);
+
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                int value = state->board[y * width + x];
+                printf("%4d", value);
+            }
+            printf("\n");
         }
-        printf("\n");
+
+        fflush(stdout);
+        sem_post(&sync->printFinished);
     }
+
+    printf("🏁 El juego ha terminado.\n");
     
 
     // Limpieza
