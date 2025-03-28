@@ -38,6 +38,28 @@ typedef struct {
 #define SHM_STATE "/game_state"
 #define SHM_SYNC "/game_sync"
 
+int iterations = 0;
+
+void printBoard(GameState *state, int height, int width) {
+    printf("📋 Tablero (%dx%d):\n", width, height);
+    for (int y = 0; y < height; y++) {
+        for (int x = 0; x < width; x++) {
+            int value = state->board[y * width + x]; // acceso lineal
+            printf("%4d", value);
+        }
+        printf("\n");
+    }
+}
+
+void printPlayerData(PlayerState player) {
+    printf("Jugador: %s\n", player.playerName);
+    printf("Puntaje: %d\n", player.score);
+    printf("Movimientos inválidos solicitados: %d\n", player.requestedInvalidMovements);
+    printf("Movimientos válidos solicitados: %d\n", player.requestedValidMovements);
+    printf("Coordenadas: (%d, %d)\n", player.x, player.y);
+    printf("Bloqueado: %s\n", player.isBlocked ? "Sí" : "No");
+}
+
 int main(int argc, char *argv[]) {
 
     int height = atoi(argv[1]);
@@ -75,26 +97,17 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     }
 
-    int iterations = 0;
-
     // Continuous loop to print the board
     while (!state->hasFinished) {
         // Wait for the signal that the board has been updated
         sem_wait(&sync->printNeeded);
-        // Print the board
         printf("\033[H\033[J"); // Clear the terminal
-        printf("Iterations: %d, 0 valid: %d, 0 invalid: %d, -1 valid: %d, -1 invalid: %d\n", iterations++, 
-               state->players[0].requestedValidMovements, state->players[0].requestedInvalidMovements,
-               state->players[1].requestedValidMovements, state->players[1].requestedInvalidMovements);
-        printf("📋 Tablero (%dx%d):\n", width, height);
-
-        for (int y = 0; y < height; y++) {
-            for (int x = 0; x < width; x++) {
-                int value = state->board[y * width + x]; // acceso lineal
-                printf("%4d", value);
-            }
+        for (int i = 0; i < state->numOfPlayers; i++) {
+            printPlayerData(state->players[i]);
             printf("\n");
         }
+        printBoard(state, height, width);
+        
         // Signal that the printing is finished
         sem_post(&sync->printFinished);
     }

@@ -129,7 +129,7 @@ int main()
             player->isBlocked = true; // Mark player as blocked if pipe fails
             break;
         }
-
+        
         // Notify the view that the board has been updated
         sem_post(&sync->printNeeded);
 

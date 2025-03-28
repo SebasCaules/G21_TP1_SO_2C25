@@ -1,0 +1,64 @@
+ls
+cd root
+ls
+gcc player.c -o player && ./ChompChamps -p player
+gcc player.c -o player && ./ChompChamps -p player
+gcc player.c -o player && ./ChompChamps -p player && gcc view.c view && ./ChompChamps -v view -p player
+gcc player.c -o player && gcc view.c -o view && ./ChompChamps -v ./view -p ./player
+./runChompChamps.sh
+./runChompChamps.sh
+./runChompChamps.sh
+./runChompChamps.sh
+./runChompChamps.sh
+./runChompChamps.sh
+./runChompChamps.sh
+./runChompChamps.sh
+./runChompChamps.sh
+./runChompChamps.sh
+./runChompChamps.sh
+./runChompChamps.sh
+./runChompChamps.sh
+./runChompChamps.sh
+./runChompChamps.sh
+./runChompChamps.sh
+./runChompChamps.sh
+./runChompChamps.sh
+./runChompChamps.sh
+./runChompChamps.sh
+./runChompChamps.sh
+./runChompChamps.sh
+./runChompChamps.sh
+./runChompChamps.sh
+./runChompChamps.sh
+./runChompChamps.sh
+./runChompChamps.sh
+./runChompChamps.sh
+./runChompChamps.sh
+./runChompChamps.sh
+./runChompChamps.sh
+./runChompChamps.sh
+./runChompChamps.sh
+./runChompChamps.sh
+./runChompChamps.sh
+./runChompChamps.sh
+./runChompChamps.sh
+./runChompChamps.sh
+./runChompChamps.sh
+./runChompChamps.sh
+./runChompChamps.sh
+./runChompChamps.sh
+./runChompChamps.sh
+./runChompChamps.sh
+./runChompChamps.sh
+./runChompChamps.sh
+./runChompChamps.sh
+./runChompChamps.sh
+./runChompChamps.sh
+./runChompChamps.sh
+./runChompChamps.sh
+./runChompChamps.sh
+./runChompChamps.sh
+./runChompChamps.sh
+./runChompChamps.sh
+./runChompChamps.sh
+exit
