@@ -1,56 +1,51 @@
-#include <stdio.h>
-#include <stdlib.h>
+#include <semaphore.h>
 #include <stdbool.h>
+#include <stdio.h>
+#include <sys/stat.h>
+#include <sys/mman.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <stdlib.h>
+#include <time.h>
 
 #define HEIGHT 10
 #define WIDTH 10
 
-typedef struct {
-    char playerName[16];
-    unsigned int score;
-    unsigned int requestedInvalidMoves;
-    unsigned int requestedValidMoves;
-    unsigned short x, y;
-    // pid_t pid;
-    bool availableValidMoves;
-} Player;
+typedef struct
+{
+    char playerName[16];                    // Nombre del jugador
+    unsigned int score;                     // Puntaje
+    unsigned int requestedInvalidMovements; // Cantidad de solicitudes de movimientos inválidas realizadas
+    unsigned int requestedValidMovements;   // Cantidad de solicitudes de movimientos válidas realizadas
+    unsigned short x, y;                    // Coordenadas x e y en el tablero
+    pid_t pid;                              // Identificador de proceso
+    bool isBlocked;                         // Indica si el jugador está bloqueado
+} PlayerProcess;
 
-typedef struct {
-    int value;
-    bool available;
-} Cell;
+typedef struct
+{
+    unsigned short width;      // Ancho del tablero
+    unsigned short height;     // Alto del tablero
+    unsigned int numOfPlayers; // Cantidad de jugadores
+    PlayerProcess players[9];  // Lista de jugadores
+    bool hasFinished;          // Indica si el juego se ha terminado
+    int board[];               // Puntero al comienzo del tablero. fila-0, fila-1, ..., fila-n-1
+} Game;
+
+typedef struct
+{
+    sem_t printNeeded;          // Se usa para indicarle a la vista que hay cambios por imprimir
+    sem_t printFinished;        // Se usa para indicarle al master que la vista terminó de imprimir
+    sem_t writerEntryMutex;     // Mutex para evitar inanición del master al acceder al estado
+    sem_t gameStateMutex;       // Mutex para el estado del juego
+    sem_t readersCountMutex;    // Mutex para la siguiente variable
+    unsigned int activeReaders; // Cantidad de jugadores leyendo el estado
+} Semaphores;
+
+#define SHM_STATE "/game_state"
+#define SHM_SYNC "/game_sync"
 
 
-int main(int agrc, char* argv[]) {
-    init();
-    print();
-    return 0;
-}
 
 
-int mat[HEIGHT][WIDTH];
 
-void init() {
-    srand(time(NULL));
-
-    // Llenar la matriz con valores random entre 0 y 9
-    for (int i = 0; i < WIDTH; i++) {
-        for (int j = 0; j < HEIGHT; j++) {
-            mat[i][j] = rand() % 10;
-        }
-    }
-}
-
-void print() {
-    for (int i = 0; i < HEIGHT; i++) {
-        for (int j = 0; j < WIDTH; j++) {
-            printf("%d ", mat[i][j]);
-        }
-        printf("\n");
-    }
-}
-
-int placePlayer(Player * player) {
-    
-    
-}
