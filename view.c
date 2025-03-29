@@ -42,9 +42,9 @@ int iterations = 0;
 
 void printBoard(GameState *state, int height, int width) {
     printf("📋 Tablero (%dx%d) | %d jugadores\n", width, height, state->numOfPlayers);
-    for (int y = 0; y < height; y++) {
-        for (int x = 0; x < width; x++) {
-            int value = state->board[y * width + x]; // acceso lineal
+    for (int x = 0; x < width; x++) {
+        for (int y = 0; y < height; y++) {
+            int value = state->board[x * width + y]; // acceso lineal
             printf("%4d", value);
         }
         printf("\n");
@@ -96,6 +96,11 @@ int main(int argc, char *argv[]) {
         perror("mmap shm_sync");
         exit(EXIT_FAILURE);
     }
+
+    // printf("%d x %d y\n", state->players[0].x, state->players[0].y);
+    // printf("%d x %d y\n", state->players[1].x, state->players[1].y);
+    
+    // sleep(5);
 
     while (!state->hasFinished) {
         sem_wait(&sync->printNeeded);
