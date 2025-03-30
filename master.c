@@ -14,9 +14,9 @@ void callView(Semaphores *sync);
 
 void callPlayer(Semaphores *sync);
 
-void procesar_movimiento(pid_t jugadorPid, unsigned char moveRequest, GameState *state);
+void processMovement(pid_t jugadorPid, unsigned char moveRequest, GameState *state);
 
-bool todos_los_jugadores_bloqueados(GameState *state);
+bool areAllPlayersBlocked(GameState *state);
 
 int main(int argc, char *argv[]) {
     // Default values
@@ -182,7 +182,7 @@ int main(int argc, char *argv[]) {
                 unsigned int validBefore = state->players[i].requestedValidMovements;
 
                 // Aplica la lógica de ChompChamps
-                procesar_movimiento(state->players[i].pid, move, state);
+                processMovement(state->players[i].pid, move, state);
 
                 // Si subió la cantidad de movimientos válidos, hubo movimiento real
                 if (state->players[i].requestedValidMovements > validBefore) {
@@ -262,16 +262,38 @@ int main(int argc, char *argv[]) {
     return 0;   
 }
 
-bool todos_los_jugadores_bloqueados(GameState *state) {
-    for (int i = 0; i < state->numOfPlayers; i++) {
-        if (!state->players[i].isBlocked) {
-            return false; // Al menos uno sigue activo
-        }
+void distributePlayers(GameState *state) {
+    float centerX = 8.0f;
+    float centerY = 5.0f;
+    float radius = 3.0f;
+
+    int numPlayers = state->numOfPlayers;
+    int width = state->width;
+    int height = state->height;
+
+    for (int i = 0; i < numPlayers; i++) {
+        // Ángulo para cada jugador
+        float angle = (2.0f * M_PI * i) / (float)numPlayers;
+
+        float fx = centerX + radius * cosf(angle);
+        float fy = centerY + radius * sinf(angle);
+
+        // Redondear
+        int x = (int)lroundf(fx);
+        int y = (int)lroundf(fy);
+
+        // Clamp seguro (garantiza [0, width-1] y [0, height-1])
+        if (x < 0) x = 0;
+        if (x >= width) x = width - 1;
+        if (y < 0) y = 0;
+        if (y >= height) y = height - 1;
+
+        state->players[i].x = x;
+        state->players[i].y = y;
     }
-    return true;
 }
 
-void procesar_movimiento(pid_t jugadorPid, unsigned char moveRequest, GameState *state) {
+void processMovement(pid_t jugadorPid, unsigned char moveRequest, GameState *state) {
     PlayerState *player = NULL;
     for (int i = 0; i < state->numOfPlayers; i++) {
         if (state->players[i].pid == jugadorPid) {
@@ -333,6 +355,15 @@ void procesar_movimiento(pid_t jugadorPid, unsigned char moveRequest, GameState 
     if (!puede_moverse) {
         player->isBlocked = true;
     }
+}
+
+bool areAllPlayersBlocked(GameState *state) {
+    for (int i = 0; i < state->numOfPlayers; i++) {
+        if (!state->players[i].isBlocked) {
+            return false; // Al menos uno sigue activo
+        }
+    }
+    return true;
 }
 
 void callPlayer(Semaphores *sync) {

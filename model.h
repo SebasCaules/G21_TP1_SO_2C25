@@ -1,12 +1,11 @@
 #include <sys/types.h>
 #include <semaphore.h>
 
-
-//Share memory names
+// Share memory names
 #define SHM_STATE "/game_state"
 #define SHM_SYNC "/game_sync"
 
-//Game constants
+// Game constants
 #define HEIGHT 10
 #define WIDTH 10
 #define DELAY 200
