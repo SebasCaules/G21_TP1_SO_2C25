@@ -61,12 +61,12 @@ void printBoard(GameState *state, int height, int width) {
 
 void printPlayerData(PlayerState player) {
     printf("Jugador: %-16s | Puntaje: %6d | Inválidos: %3d | Válidos: %3d | Posición: (%2d, %2d) %-3s\n",
-           player.playerName, 
-           player.score, 
-           player.requestedValidMovements,
-           player.requestedInvalidMovements, 
-           player.x, player.y,
-           player.isBlocked ? "| Bloqueado" : "");
+        player.playerName, 
+        player.score, 
+        player.requestedValidMovements,
+        player.requestedInvalidMovements, 
+        player.x, player.y,
+        player.isBlocked ? "| Bloqueado" : "");
 }
 
 int main(int argc, char *argv[]) {

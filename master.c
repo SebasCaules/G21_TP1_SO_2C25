@@ -14,8 +14,6 @@ void callView(Semaphores *sync);
 
 void callPlayer(Semaphores *sync);
 
-void eraseSHM(char *name);
-
 void procesar_movimiento(pid_t jugadorPid, unsigned char moveRequest, GameState *state);
 
 bool todos_los_jugadores_bloqueados(GameState *state);

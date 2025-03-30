@@ -9,13 +9,6 @@
 #include <stdio.h>      // perror
 #include <unistd.h>     // ftruncate, close
 
-
-typedef struct {
-    int fd;
-    void *ptr;
-    int size;
-} SHMData;
-
 /**
  * @brief Crea (o abre) una memoria compartida con nombre 'name' y tamaño 'size'.
  *
