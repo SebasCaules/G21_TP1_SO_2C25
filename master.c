@@ -18,8 +18,6 @@ void procesar_movimiento(pid_t jugadorPid, unsigned char moveRequest, GameState 
 
 bool todos_los_jugadores_bloqueados(GameState *state);
 
-void distributePlayers(GameState *state);
-
 int main(int argc, char *argv[]) {
     // Default values
     unsigned short width = WIDTH;
@@ -30,7 +28,6 @@ int main(int argc, char *argv[]) {
     char *viewPath = NULL;
     char *playerPaths[MAX_PLAYERS];
     int numPlayers = 0;
-
     // Parse arguments
     int opt;
     while ((opt = getopt(argc, argv, "w:h:d:t:s:v:p:")) != -1) {
@@ -105,7 +102,6 @@ int main(int argc, char *argv[]) {
         };
         snprintf(state->players[i].playerName, sizeof(state->players[i].playerName), "%s (%d)", playerPaths[i] + 2, (int)i);
     }
-    distributePlayers(state);
     fillBoard(state, seed);
 
     // Initialize semaphores
@@ -246,49 +242,25 @@ int main(int argc, char *argv[]) {
     printf("---------------------------------------------------\n");
     printf("Player %s (%d) is the winner with a score of %d\n", state->players[bestPlayer].playerName, bestPlayer, state->players[bestPlayer].score);
     printf("Juego terminado\n");
+
+    // Liberar recursos
+    sem_destroy(&sync->printNeeded);
+    sem_destroy(&sync->printFinished);
+    sem_destroy(&sync->writerEntryMutex);
+    sem_destroy(&sync->gameStateMutex);
+    sem_destroy(&sync->readersCountMutex);
     
-    //Borrar SHM al finalizar
+    // Borrar SHM al finalizar
     eraseSHM(SHM_STATE);
     eraseSHM(SHM_SYNC);
 
-    
-    // falta cerrar pipes?
-
+    // Cerrar pipes
+    for (int i = 0; i < numPlayers; i++) {
+        close(player_pipes[i]);
+    }
 
     return 0;   
 }
-
-void distributePlayers(GameState *state) {
-    float centerX = 8.0f;
-    float centerY = 5.0f;
-    float radius = 3.0f;
-
-    int numPlayers = state->numOfPlayers;
-    int width = state->width;
-    int height = state->height;
-
-    for (int i = 0; i < numPlayers; i++) {
-        // Ángulo para cada jugador
-        float angle = (2.0f * M_PI * i) / (float)numPlayers;
-
-        float fx = centerX + radius * cosf(angle);
-        float fy = centerY + radius * sinf(angle);
-
-        // Redondear
-        int x = (int)lroundf(fx);
-        int y = (int)lroundf(fy);
-
-        // Clamp seguro (garantiza [0, width-1] y [0, height-1])
-        if (x < 0) x = 0;
-        if (x >= width) x = width - 1;
-        if (y < 0) y = 0;
-        if (y >= height) y = height - 1;
-
-        state->players[i].x = x;
-        state->players[i].y = y;
-    }
-}
-
 
 bool todos_los_jugadores_bloqueados(GameState *state) {
     for (int i = 0; i < state->numOfPlayers; i++) {
