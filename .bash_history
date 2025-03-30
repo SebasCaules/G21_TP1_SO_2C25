@@ -63,3 +63,4 @@ gcc player.c -o player && gcc view.c -o view && ./ChompChamps -v ./view -p ./pla
 ./runChompChamps.sh
 exit
 exit
+exit

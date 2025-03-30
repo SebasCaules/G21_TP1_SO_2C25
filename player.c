@@ -3,18 +3,7 @@
 #include "shmlib.h"
 #include "model.h"
 
-void calculateNewPosition(unsigned char moveRequest, unsigned short *newX, unsigned short *newY, unsigned short x, unsigned short y) {
-    switch (moveRequest) {
-        case 0: *newY = y - 1; *newX = x;     break; // Up
-        case 1: *newY = y - 1; *newX = x + 1; break; // Up-Right
-        case 2: *newY = y;     *newX = x + 1; break; // Right
-        case 3: *newY = y + 1; *newX = x + 1; break; // Down-Right
-        case 4: *newY = y + 1; *newX = x;     break; // Down
-        case 5: *newY = y + 1; *newX = x - 1; break; // Down-Left
-        case 6: *newY = y;     *newX = x - 1; break; // Left
-        case 7: *newY = y - 1; *newX = x - 1; break; // Up-Left
-    }
-}
+void calculateNewPosition(unsigned char moveRequest, unsigned short *newX, unsigned short *newY, unsigned short x, unsigned short y);
 
 int main(int agrc, char *argv[]) {
 
@@ -67,4 +56,17 @@ int main(int agrc, char *argv[]) {
     closeSHM(sync, syncSize);
 
     return 0;
+}
+
+void calculateNewPosition(unsigned char moveRequest, unsigned short *newX, unsigned short *newY, unsigned short x, unsigned short y) {
+    switch (moveRequest) {
+        case 0: *newY = y - 1; *newX = x;     break; // Up
+        case 1: *newY = y - 1; *newX = x + 1; break; // Up-Right
+        case 2: *newY = y;     *newX = x + 1; break; // Right
+        case 3: *newY = y + 1; *newX = x + 1; break; // Down-Right
+        case 4: *newY = y + 1; *newX = x;     break; // Down
+        case 5: *newY = y + 1; *newX = x - 1; break; // Down-Left
+        case 6: *newY = y;     *newX = x - 1; break; // Left
+        case 7: *newY = y - 1; *newX = x - 1; break; // Up-Left
+    }
 }
