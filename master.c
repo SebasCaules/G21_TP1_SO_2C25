@@ -238,10 +238,10 @@ int main(int argc, char *argv[]) {
                 bestPlayer = i;
             }
         }
+        close(player_pipes[i]); // Cerar pipes
     }
     printf("---------------------------------------------------\n");
-    printf("Player %s (%d) is the winner with a score of %d\n", state->players[bestPlayer].playerName, bestPlayer, state->players[bestPlayer].score);
-    printf("Juego terminado\n");
+    printf("Player %s is the winner with a score of %d\n", state->players[bestPlayer].playerName, state->players[bestPlayer].score);
 
     // Liberar recursos
     sem_destroy(&sync->printNeeded);
@@ -253,12 +253,6 @@ int main(int argc, char *argv[]) {
     // Borrar SHM al finalizar
     eraseSHM(SHM_STATE);
     eraseSHM(SHM_SYNC);
-
-    // Cerrar pipes
-    for (int i = 0; i < numPlayers; i++) {
-        close(player_pipes[i]);
-    }
-
     return 0;   
 }
 
