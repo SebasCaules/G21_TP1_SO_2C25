@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include "shmlib.h"
 
 
 #define HEIGHT 10
@@ -69,6 +70,8 @@ void procesar_movimiento(pid_t jugadorPid, unsigned char moveRequest, GameState 
 bool todos_los_jugadores_bloqueados(GameState *state);
 
 void distributePlayers(GameState *state);
+
+void eraseSHM(char *name);
 
 int main(int argc, char *argv[]) {
     // Default values
@@ -196,7 +199,7 @@ int main(int argc, char *argv[]) {
         char *args[] = { "./view", width_str, height_str, NULL };
         execv("./view", args);
         perror("execv view");
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     int player_pipes[MAX_PLAYERS]; // Guardar file descriptors para leer de los jugadores
@@ -294,30 +297,6 @@ int main(int argc, char *argv[]) {
         usleep(5000);
     }
 
-    // // Dentro de tu loop principal
-    // while (!state->hasFinished) {
-
-    //     for (int i = 0; i < state->numOfPlayers; i++) {
-    //         unsigned char move;
-    //         ssize_t bytesRead = read(player_pipes[i], &move, sizeof(move));
-
-    //         if (bytesRead == sizeof(move)) {
-    //             // Procesar el movimiento
-    //             pid_t jugador_pid = state->players[i].pid;
-    //             procesar_movimiento(jugador_pid, move, state);
-    //         }
-    //     }
-
-    //     // Imprimir vista
-    //     callView(sync);
-
-    //     if (todos_los_jugadores_bloqueados(state)) {
-    //     state->hasFinished = true;
-    //     }
-    //     // Lógica extra (lectores/escritores si hace falta)
-    //     usleep(100000); // 100ms para simular el turno
-    // }
-
     for (size_t i = 0; i < state->numOfPlayers; i++) {
         printf("Player %s (%d) exited (%d) with score of %d / %d / %d\n", 
         state->players[i], i, 0, state->players[i].score,
@@ -393,14 +372,14 @@ void procesar_movimiento(pid_t jugadorPid, unsigned char moveRequest, GameState 
 
     bool dentroDelTablero =
         (new_x >= 0 && new_x < state->width &&
-         new_y >= 0 && new_y < state->height);
+        new_y >= 0 && new_y < state->height);
 
     bool celdaLibre = false;
     int valorCelda = 0;
     if (dentroDelTablero) {
         valorCelda = state->board[new_y * state->width + new_x];
         // Ahora consideramos >= 0 como libre
-        if (valorCelda >= 0) {
+        if (valorCelda > 0) {
             celdaLibre = true;
         }
     }
@@ -434,17 +413,10 @@ void procesar_movimiento(pid_t jugadorPid, unsigned char moveRequest, GameState 
                 break;
             }
         }
-        // Bloquear si no quedan movimientos o se superó un umbral de inválidos
-        if (!puede_moverse || player->requestedInvalidMovements >= 3) {
+        // Bloquear si no quedan movimientos
+        if (!puede_moverse) {
             player->isBlocked = true;
         }
-    }
-}
-
-void eraseSHM(char *name) {
-    if (shm_unlink(name) == -1) {
-        perror("shm_unlink");
-        exit(EXIT_FAILURE);
     }
 }
 
@@ -473,27 +445,9 @@ void addPlayerToBoard(GameState *state) {
     }
 }
 
-void *createSHM(char *name, size_t size, mode_t mode) {
-    int fd;
-
-    fd = shm_open(name, O_RDWR | O_CREAT, mode);
-    if (fd == -1) {
-        perror("shm_open");
+void eraseSHM(char *name) {
+    if (shm_unlink(name) == -1) {
+        perror("shm_unlink");
         exit(EXIT_FAILURE);
     }
-    
-    //int ftruncate(int fd, off_t length);
-    if (-1 == ftruncate(fd, size)) {
-        perror("ftruncate");
-        exit(EXIT_FAILURE);
-    }
-    
-    // void *mmap(void addr[.length], size_t length, int prot, int flags, int fd, off_t offset);
-    void *p = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-    if (p == MAP_FAILED) {
-        perror("mmap");
-        exit(EXIT_FAILURE);
-    }
-
-    return p;
 }
