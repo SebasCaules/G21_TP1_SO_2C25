@@ -1,59 +1,10 @@
-#include <semaphore.h>
 #include <stdbool.h>
 #include <stdio.h>
-#include <sys/stat.h>
-#include <sys/mman.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <stdlib.h>
+#include "shmlib.h"
+#include "model.h"
 #include <time.h>
-#include <stdlib.h>
 #include <string.h>
 #include <math.h>
-#include "shmlib.h"
-
-
-#define HEIGHT 10
-#define WIDTH 10
-#define DELAY 200
-#define TIMEOUT 10
-#define MAX_PLAYERS 9
-
-#define SHM_STATE "/game_state"
-#define SHM_SYNC "/game_sync"
-
-typedef struct
-{
-    char playerName[16];                    // Nombre del jugador
-    unsigned int score;                     // Puntaje
-    unsigned int requestedInvalidMovements; // Cantidad de solicitudes de movimientos inválidas realizadas
-    unsigned int requestedValidMovements;   // Cantidad de solicitudes de movimientos válidas realizadas
-    unsigned short x, y;                    // Coordenadas x e y en el tablero
-    pid_t pid;                              // Identificador de proceso
-    bool isBlocked;                         // Indica si el jugador está bloqueado
-} PlayerState;
-
-typedef struct
-{
-    unsigned short width;      // Ancho del tablero
-    unsigned short height;     // Alto del tablero
-    unsigned int numOfPlayers; // Cantidad de jugadores
-    PlayerState players[9];  // Lista de jugadores
-    bool hasFinished;          // Indica si el juego se ha terminado
-    int board[];               // Puntero al comienzo del tablero. fila-0, fila-1, ..., fila-n-1
-} GameState;
-
-typedef struct
-{
-    sem_t printNeeded;          // Se usa para indicarle a la vista que hay cambios por imprimir
-    sem_t printFinished;        // Se usa para indicarle al master que la vista terminó de imprimir
-    sem_t writerEntryMutex;     // Mutex para evitar inanición del master al acceder al estado
-    sem_t gameStateMutex;       // Mutex para el estado del juego
-    sem_t readersCountMutex;    // Mutex para la siguiente variable
-    unsigned int activeReaders; // Cantidad de jugadores leyendo el estado
-} Semaphores;
-
-void *createSHM(char *name, size_t size, mode_t mode);
 
 void fillBoard(GameState *state, unsigned int seed);
 
@@ -70,8 +21,6 @@ void procesar_movimiento(pid_t jugadorPid, unsigned char moveRequest, GameState 
 bool todos_los_jugadores_bloqueados(GameState *state);
 
 void distributePlayers(GameState *state);
-
-void eraseSHM(char *name);
 
 int main(int argc, char *argv[]) {
     // Default values
@@ -298,13 +247,24 @@ int main(int argc, char *argv[]) {
         usleep(delay * 1000);
     }
 
+    int bestPlayer = 0;
+
     for (size_t i = 0; i < state->numOfPlayers; i++) {
         printf("Player %s (%d) exited (%d) with score of %d / %d / %d\n", 
         state->players[i], i, 0, state->players[i].score,
         state->players[i].requestedValidMovements,
         state->players[i].requestedInvalidMovements);
+        if (state->players[i].score > state->players[bestPlayer].score) {
+            bestPlayer = i;
+        }
+        if (state->players[i].score == state->players[bestPlayer].score) {
+            if (state->players[i].requestedValidMovements < state->players[bestPlayer].requestedValidMovements) {
+                bestPlayer = i;
+            }
+        }
     }
-
+    printf("---------------------------------------------------\n");
+    printf("Player %s (%d) is the winner with a score of %d\n", state->players[bestPlayer].playerName, bestPlayer, state->players[bestPlayer].score);
     printf("Juego terminado\n");
     
     //Borrar SHM al finalizar
@@ -440,12 +400,5 @@ void fillBoard(GameState *state, unsigned int seed) {
 void addPlayerToBoard(GameState *state) {
     for (int i = 0; i < state->numOfPlayers; i++) {
         state->board[state->players[i].y * state->width + state->players[i].x] = -i;
-    }
-}
-
-void eraseSHM(char *name) {
-    if (shm_unlink(name) == -1) {
-        perror("shm_unlink");
-        exit(EXIT_FAILURE);
     }
 }

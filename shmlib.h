@@ -46,25 +46,25 @@ void eraseSHM(char *name);
  *
  * - Hace shm_open con 'oflag'.
  * - Obtiene su tamaño con fstat().
- * - Mapea con PROT_READ (o PROT_READ|PROT_WRITE si querés).
+ * - Mapea con PROT_READ o PROT_READ | PROT_WRITE dependiendo del flag.
  * - Sale por exit(EXIT_FAILURE) si hay error.
  *
- * @param name   Nombre de la memoria compartida, ej: "/shm_test"
- * @param oflag  Flags de apertura (O_RDWR, O_RDONLY, etc.)
- * @return       Puntero al mapeo en memoria.
+ * @param name   Nombre de la memoria compartida, ej: "/game_state"
+ * @param oflag  Flags de apertura (O_RDONLY, O_RDWR, etc.)
+ * @return       Puntero al mapeo en memoria (resultado de mmap)
  */
-SHMData *openSHM(char* name, int oflag);
+void* openSHM(const char* name, int oflag, size_t *sizeOutput);
 
 /**
- * @brief Libera una memoria compartida mapeada y cierra su file descriptor.
- * 
- * - Hace munmap() y close().
- * - Sale por exit(EXIT_FAILURE) si hay error.
+ * @brief Libera una memoria compartida mapeada y cierra su descriptor usando solo el nombre.
  *
- * @param ptr     Puntero devuelto por mmap()
- * @param size    Tamaño del mapeo (por ejemplo obtenido con fstat)
- * @param fd      File descriptor devuelto por shm_open
+ * - Hace fstat para conocer el tamaño.
+ * - Ejecuta munmap() y close() internamente.
+ * - No devuelve nada. Muestra errores con perror.
+ *
+ * @param name   Nombre de la memoria compartida, ej: "/game_state"
+ * @param ptr    Puntero devuelto por openSHM (resultado de mmap)
  */
-void closeSHM(SHMData *data);
+void closeSHM(void* ptr, size_t size);
 
 #endif // SHMLIB_H
