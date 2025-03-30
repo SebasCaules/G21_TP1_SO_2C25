@@ -235,7 +235,6 @@ int main(int argc, char *argv[]) {
 
     //Print first board
     callView(sync);
-
     // Marca el momento del último movimiento válido
     time_t lastValidMove = time(NULL);
 
@@ -280,6 +279,7 @@ int main(int argc, char *argv[]) {
         if (allBlocked) {
             // Fin: nadie más puede moverse
             state->hasFinished = true;
+            callView(sync);
             break;
         }
 
@@ -288,13 +288,14 @@ int main(int argc, char *argv[]) {
             time_t now = time(NULL);
             if (difftime(now, lastValidMove) >= timeout) {
                 state->hasFinished = true; // Se terminó por inactividad
+                callView(sync);
                 break;
             }
         }
         callView(sync);
 
         // Pequeña pausa para no quemar CPU
-        usleep(5000);
+        usleep(delay * 1000);
     }
 
     for (size_t i = 0; i < state->numOfPlayers; i++) {
@@ -309,7 +310,6 @@ int main(int argc, char *argv[]) {
     //Borrar SHM al finalizar
     eraseSHM(SHM_STATE);
     eraseSHM(SHM_SYNC);
-
     return 0;   
 }
 
@@ -371,52 +371,50 @@ void procesar_movimiento(pid_t jugadorPid, unsigned char moveRequest, GameState 
     int new_y = player->y + dy[moveRequest % 8];
 
     bool dentroDelTablero =
-        (new_x >= 0 && new_x < state->width &&
-        new_y >= 0 && new_y < state->height);
+        new_x >= 0 && new_x < state->width &&
+        new_y >= 0 && new_y < state->height;
 
     bool celdaLibre = false;
     int valorCelda = 0;
+
     if (dentroDelTablero) {
         valorCelda = state->board[new_y * state->width + new_x];
-        // Ahora consideramos >= 0 como libre
+        // Ahora solo permitimos celdas con valor estrictamente > 0
         if (valorCelda > 0) {
             celdaLibre = true;
         }
     }
 
-    bool movimiento_valido = (dentroDelTablero && celdaLibre);
+    bool movimiento_valido = dentroDelTablero && celdaLibre;
 
     if (movimiento_valido) {
-        // Si la celda es > 0, es una recompensa
-        if (valorCelda > 0) {
-            player->score += valorCelda;
-        }
-        // Marcar la celda capturada por este jugador
+        player->score += valorCelda;
+        player->x = new_x;
+        player->y = new_y;
+
         int index = (int)(player - state->players);
         state->board[new_y * state->width + new_x] = -index;
 
-        player->x = new_x;
-        player->y = new_y;
         player->requestedValidMovements++;
     } else {
         player->requestedInvalidMovements++;
+    }
 
-        // Chequear si hay algún movimiento posible alrededor
-        bool puede_moverse = false;
-        for (int d = 0; d < 8; d++) {
-            int tx = player->x + dx[d];
-            int ty = player->y + dy[d];
-            if (tx >= 0 && tx < state->width &&
-                ty >= 0 && ty < state->height &&
-                state->board[ty * state->width + tx] >= 0) {
-                puede_moverse = true;
-                break;
-            }
+    // Verificar si el jugador está completamente bloqueado
+    bool puede_moverse = false;
+    for (int d = 0; d < 8; d++) {
+        int tx = player->x + dx[d];
+        int ty = player->y + dy[d];
+        if (tx >= 0 && tx < state->width &&
+            ty >= 0 && ty < state->height &&
+            state->board[ty * state->width + tx] > 0) {
+            puede_moverse = true;
+            break;
         }
-        // Bloquear si no quedan movimientos
-        if (!puede_moverse) {
-            player->isBlocked = true;
-        }
+    }
+
+    if (!puede_moverse) {
+        player->isBlocked = true;
     }
 }
 

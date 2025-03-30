@@ -9,7 +9,7 @@ gcc player.c shmlib.o -o player -lrt -lpthread || { echo "❌ Error compilando p
 gcc view.c shmlib.o -o view -lrt -lpthread || { echo "❌ Error compilando view.c"; exit 1; }
 
 # Ejecutar master con argumentos
-./master -w 10 -h 10 -d 200 -t 10 -s 90 -v ./view -p ./player ./player ./player ./player ./player
+./master -w 10 -h 10 -d 200 -t 10 -s 90 -v ./view -p ./player ./player
 
 # Limpieza
 rm -f master player view shmlib.o
