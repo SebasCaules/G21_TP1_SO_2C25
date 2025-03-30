@@ -84,24 +84,7 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "Debe proveer al menos un jugador.\n");
         exit(EXIT_FAILURE);
     }
-
-    // Print parsed arguments for debugging
-    printf("Parsed Arguments:\n");
-    printf("Width: %d\n", width);
-    printf("Height: %d\n", height);
-    printf("Delay: %d ms\n", delay);
-    printf("Timeout: %d s\n", timeout);
-    printf("Seed: %u\n", seed);
-    if (viewPath) {
-        printf("View Path: %s\n", viewPath);
-    } else {
-        printf("View Path: None\n");
-    }
-    printf("Players (%d):\n", numPlayers);
-    for (int i = 0; i < numPlayers; i++) {
-        printf("  Player %d: %s\n", i + 1, playerPaths[i]);
-    }
-
+    
     // Initialize the game state and semaphores here (not implemented yet)
     GameState *state = (GameState *)createSHM(SHM_STATE, sizeof(GameState) + width * height * sizeof(int), 0644);
     Semaphores *sync = (Semaphores *)createSHM(SHM_SYNC, sizeof(Semaphores), 0666);
@@ -121,9 +104,8 @@ int main(int argc, char *argv[]) {
             .requestedInvalidMovements = 0,
             .requestedValidMovements = 0,
             .isBlocked = false
-            };
-        playerPaths[i]+=2;
-        strcpy(state->players[i].playerName, playerPaths[i]);
+        };
+        snprintf(state->players[i].playerName, sizeof(state->players[i].playerName), "%s (%d)", playerPaths[i] + 2, (int)i);
     }
     distributePlayers(state);
     fillBoard(state, seed);
@@ -250,8 +232,8 @@ int main(int argc, char *argv[]) {
     int bestPlayer = 0;
 
     for (size_t i = 0; i < state->numOfPlayers; i++) {
-        printf("Player %s (%d) exited (%d) with score of %d / %d / %d\n", 
-        state->players[i], i, 0, state->players[i].score,
+        printf("Player %s exited (%d) with score of %d / %d / %d\n", 
+        state->players[i], 0, state->players[i].score,
         state->players[i].requestedValidMovements,
         state->players[i].requestedInvalidMovements);
         if (state->players[i].score > state->players[bestPlayer].score) {
@@ -270,6 +252,11 @@ int main(int argc, char *argv[]) {
     //Borrar SHM al finalizar
     eraseSHM(SHM_STATE);
     eraseSHM(SHM_SYNC);
+
+    
+    // falta cerrar pipes?
+
+
     return 0;   
 }
 
