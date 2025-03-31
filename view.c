@@ -51,12 +51,12 @@ void printBoard(GameState *state, int height, int width) {
                     }
                 }
                 if (isHead) {
-                    printf("%s%4d%s", headColors[playerIndex % 9], value, reset);
+                    printf("%s%3d%s", headColors[playerIndex % 9], value, reset);
                 } else {
-                    printf("%s%4d%s", bodyColors[playerIndex % 9], value, reset);
+                    printf("%s%3d%s", bodyColors[playerIndex % 9], value, reset);
                 }
             } else {
-                printf("%4d", value);
+                printf("%3d", value);
             }
         }
         printf("\n");
