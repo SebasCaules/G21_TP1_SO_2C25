@@ -13,7 +13,7 @@ void processMovement(pid_t jugadorPid, unsigned char moveRequest, GameState *sta
 bool areAllPlayersBlocked(GameState *state);
 void callPlayer(Semaphores *sync);
 void callView(Semaphores *sync);
-void addPlayerToBoard(GameState *state);
+void addPlayersToBoard(GameState *state);
 
 int main(int argc, char *argv[]) {
     unsigned short width = WIDTH;
@@ -26,6 +26,7 @@ int main(int argc, char *argv[]) {
     int numOfPlayers = 0;
 
     parseArguments(argc, argv, &width, &height, &delay, &timeout, &seed, &viewPath, playerPaths, &numOfPlayers);
+    sleep(2);
 
     GameState *state = (GameState *)createSHM(SHM_STATE, sizeof(GameState) + width * height * sizeof(int), 0644);
     Semaphores *sync = (Semaphores *)createSHM(SHM_SYNC, sizeof(Semaphores), 0666);
@@ -47,8 +48,6 @@ int main(int argc, char *argv[]) {
         };
         snprintf(state->players[i].playerName, sizeof(state->players[i].playerName), "%s (%d)", playerPaths[i] + 2, (int)i);
     }
-
-    fillBoard(state, seed);
 
     sem_init(&sync->printNeeded, 1, 0);
     sem_init(&sync->printFinished, 1, 0);
@@ -103,64 +102,80 @@ int main(int argc, char *argv[]) {
         }
     }
 
+    fillBoard(state, seed);
+    addPlayersToBoard(state);
     callView(sync);
 
     time_t lastValidMove = time(NULL);
 
     while (!state->hasFinished) {
-        bool validMoveWasPerformed = false;
-
         for (int i = 0; i < numOfPlayers; i++) {
+            // Skip blocked players
+            sem_wait(&sync->gameStateMutex); // Lock game state
             if (state->players[i].isBlocked) {
+                sem_post(&sync->gameStateMutex); // Unlock game state
                 continue;
             }
-
+            sem_post(&sync->gameStateMutex); // Unlock game state
+    
+            // Signal the current player to move
+            sem_post(&sync->printNeeded);
+    
+            // Wait for the player's response
+            sem_wait(&sync->printFinished);
+    
+            // Process the player's move
             unsigned char move;
             ssize_t bytesRead = read(player_pipes[i], &move, sizeof(move));
-
             if (bytesRead == sizeof(move)) {
+                sem_wait(&sync->gameStateMutex); // Lock game state
                 unsigned int validBefore = state->players[i].requestedValidMovements;
-
+    
                 processMovement(state->players[i].pid, move, state);
-
+    
                 if (state->players[i].requestedValidMovements > validBefore) {
-                    validMoveWasPerformed = true;
                     lastValidMove = time(NULL);
                 }
+                sem_post(&sync->gameStateMutex); // Unlock game state
             }
-        }
 
-        bool allBlocked = true;
-        for (int i = 0; i < numOfPlayers; i++) {
-            if (!state->players[i].isBlocked) {
-                allBlocked = false;
-                break;
-            }
-        }
-        if (allBlocked) {
-            state->hasFinished = true;
-            callView(sync);
-            break;
-        }
-
-        if (!validMoveWasPerformed) {
-            time_t now = time(NULL);
-            if (difftime(now, lastValidMove) >= timeout) {
-                state->hasFinished = true; // Se terminó por inactividad
+            // Check if all players are blocked
+            sem_wait(&sync->gameStateMutex); // Lock game state
+            bool allBlocked = areAllPlayersBlocked(state);
+            sem_post(&sync->gameStateMutex); // Unlock game state
+            if (allBlocked) {
+                state->hasFinished = true;
                 callView(sync);
                 break;
             }
-        }
-        callView(sync);
 
-        usleep(delay * 1000);
+            // Check for inactivity timeout
+            time_t now = time(NULL);
+            if (difftime(now, lastValidMove) >= timeout) {
+                state->hasFinished = true; // End the game due to inactivity
+                callView(sync);
+                break;
+            }
+    
+            // Delay between turns
+            usleep(delay * 1000);
+        }
+
+        if (state->hasFinished) {
+            break;
+        }
+    
+        // Update the view after each round
+        callView(sync);
     }
 
     int winnerIndex = 0;
 
+    // falta view exited ...
+
     for (size_t i = 0; i < state->numOfPlayers; i++) {
         printf("Player %s exited (%d) with score of %d / %d / %d\n", 
-            state->players[i], 0, state->players[i].score,
+            state->players[i], 0, state->players[i].score, // el 0 esta hardcodeado
             state->players[i].requestedValidMovements,
             state->players[i].requestedInvalidMovements);
         if (state->players[i].score > state->players[winnerIndex].score) {
@@ -238,6 +253,18 @@ void parseArguments(int argc, char *argv[], unsigned short *width, unsigned shor
     if (*numOfPlayers < 1) {
         fprintf(stderr, "Error: At least one player must be provided.\n");
         exit(EXIT_FAILURE);
+    }
+
+    printf("\033[H\033[J");
+    printf("width: %d\n", *width);
+    printf("height: %d\n", *height);
+    printf("delay: %d ms\n", *delay);
+    printf("timeout: %d\n", *timeout);
+    printf("seed: %d\n", *seed);
+    printf("view: %s\n", *viewPath);
+    printf("num_players: %d\n", *numOfPlayers);
+    for (int i = 0; i < *numOfPlayers; i++) {
+        printf("  %s\n", playerPaths[i]);
     }
 }
 
@@ -351,7 +378,7 @@ void callView(Semaphores *sync) {
     sem_wait(&sync->printFinished);
 }
 
-void addPlayerToBoard(GameState *state) {
+void addPlayersToBoard(GameState *state) {
     for (int i = 0; i < state->numOfPlayers; i++) {
         state->board[state->players[i].y * state->width + state->players[i].x] = -i;
     }

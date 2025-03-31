@@ -8,7 +8,7 @@ void calculateNewPosition(unsigned char moveRequest, unsigned short *newX, unsig
 
 int main(int agrc, char *argv[]) {
 
-    srand(time(NULL));
+    srand(time(NULL) ^getpid());
 
     size_t stateSize, syncSize;
 
