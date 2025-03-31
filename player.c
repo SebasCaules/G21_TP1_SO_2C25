@@ -1,5 +1,6 @@
 #include <stdbool.h>
 #include <stdio.h>
+#include <time.h>
 #include "shmlib.h"
 #include "model.h"
 

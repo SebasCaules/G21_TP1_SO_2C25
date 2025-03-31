@@ -5,6 +5,9 @@
 #define SHM_STATE "/game_state"
 #define SHM_SYNC "/game_sync"
 
+// File names
+#define VIEW_PATH "./view"
+
 // Game constants
 #define HEIGHT 10
 #define WIDTH 10
