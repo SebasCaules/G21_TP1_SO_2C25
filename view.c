@@ -35,7 +35,7 @@ int main(int argc, char *argv[]) {
 }
 
 void printBoard(GameState *state, int height, int width) {
-    printf("📋 Tablero (%dx%d) | %d jugadores\n", width, height, state->numOfPlayers);
+    printf("Tablero (%dx%d) | %d jugadores\n", width, height, state->numOfPlayers);
     for (int x = 0; x < height; x++) {
         for (int y = 0; y < width; y++) {
             int value = state->board[x * width + y];

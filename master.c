@@ -5,6 +5,7 @@
 #include <time.h>
 #include <string.h>
 #include <math.h>
+#include <sys/wait.h>
 
 void parseArguments(int argc, char *argv[], unsigned short *width, unsigned short *height, unsigned int *delay, unsigned int *timeout, unsigned int *seed, char **viewPath, char *playerPaths[], int *numOfPlayers);
 void getPlayerInitialPosition(int playerIndex, int numOfPlayers, int width, int height, int *x, int *y);
@@ -110,25 +111,21 @@ int main(int argc, char *argv[]) {
 
     while (!state->hasFinished) {
         for (int i = 0; i < numOfPlayers; i++) {
-            // Skip blocked players
-            sem_wait(&sync->gameStateMutex); // Lock game state
+            sem_wait(&sync->gameStateMutex);
             if (state->players[i].isBlocked) {
-                sem_post(&sync->gameStateMutex); // Unlock game state
+                sem_post(&sync->gameStateMutex);
                 continue;
             }
-            sem_post(&sync->gameStateMutex); // Unlock game state
+            sem_post(&sync->gameStateMutex);
     
-            // Signal the current player to move
             sem_post(&sync->printNeeded);
     
-            // Wait for the player's response
             sem_wait(&sync->printFinished);
     
-            // Process the player's move
             unsigned char move;
             ssize_t bytesRead = read(player_pipes[i], &move, sizeof(move));
             if (bytesRead == sizeof(move)) {
-                sem_wait(&sync->gameStateMutex); // Lock game state
+                sem_wait(&sync->gameStateMutex);
                 unsigned int validBefore = state->players[i].requestedValidMovements;
     
                 processMovement(state->players[i].pid, move, state);
@@ -136,28 +133,25 @@ int main(int argc, char *argv[]) {
                 if (state->players[i].requestedValidMovements > validBefore) {
                     lastValidMove = time(NULL);
                 }
-                sem_post(&sync->gameStateMutex); // Unlock game state
+                sem_post(&sync->gameStateMutex);
             }
 
-            // Check if all players are blocked
-            sem_wait(&sync->gameStateMutex); // Lock game state
+            sem_wait(&sync->gameStateMutex);
             bool allBlocked = areAllPlayersBlocked(state);
-            sem_post(&sync->gameStateMutex); // Unlock game state
+            sem_post(&sync->gameStateMutex);
             if (allBlocked) {
                 state->hasFinished = true;
                 callView(sync);
                 break;
             }
 
-            // Check for inactivity timeout
             time_t now = time(NULL);
             if (difftime(now, lastValidMove) >= timeout) {
-                state->hasFinished = true; // End the game due to inactivity
+                state->hasFinished = true;
                 callView(sync);
                 break;
             }
     
-            // Delay between turns
             usleep(delay * 1000);
         }
 
@@ -165,29 +159,54 @@ int main(int argc, char *argv[]) {
             break;
         }
     
-        // Update the view after each round
         callView(sync);
     }
 
+    int status;
+    pid_t pid = waitpid(view_pid, &status, 0);
+    if (pid == -1) {
+        perror("waitpid for view process");
+    } else if (WIFEXITED(status)) {
+        printf("View exited (%d)\n", WEXITSTATUS(status));
+    } else if (WIFSIGNALED(status)) {
+        printf("View process was terminated by signal %d\n", WTERMSIG(status));
+    } else {
+        printf("View process terminated abnormally\n");
+    }
+    
     int winnerIndex = 0;
-
-    // falta view exited ...
-
-    for (size_t i = 0; i < state->numOfPlayers; i++) {
-        printf("Player %s exited (%d) with score of %d / %d / %d\n", 
-            state->players[i], 0, state->players[i].score, // el 0 esta hardcodeado
-            state->players[i].requestedValidMovements,
-            state->players[i].requestedInvalidMovements);
-        if (state->players[i].score > state->players[winnerIndex].score) {
-            winnerIndex = i;
+    for (int i = 0; i < numOfPlayers; i++) {
+        int status;
+        pid_t pid = waitpid(state->players[i].pid, &status, 0);
+        if (pid == -1) {
+            perror("waitpid");
+            continue;
         }
-        if (state->players[i].score == state->players[winnerIndex].score) {
-            if (state->players[i].requestedValidMovements < state->players[winnerIndex].requestedValidMovements) {
+        if (WIFEXITED(status)) {
+            printf("Player %s exited (%d) with score of %d / %d / %d\n", 
+                state->players[i].playerName, WEXITSTATUS(status), state->players[i].score,
+                state->players[i].requestedValidMovements,
+                state->players[i].requestedInvalidMovements);
+            if (state->players[i].score > state->players[winnerIndex].score) {
                 winnerIndex = i;
+            } else if (state->players[i].score == state->players[winnerIndex].score) {
+                if (state->players[i].requestedValidMovements < state->players[winnerIndex].requestedValidMovements) {
+                    winnerIndex = i;
+                } else if (state->players[i].requestedValidMovements == state->players[winnerIndex].requestedValidMovements) {
+                    if (state->players[i].requestedInvalidMovements < state->players[winnerIndex].requestedInvalidMovements) {
+                        winnerIndex = i;
+                    }
+                    // falta caso de empate
+                }
             }
+        } else if (WIFSIGNALED(status)) {
+            printf("Player %s killed by signal %d\n", state->players[i].playerName, WTERMSIG(status));
+        } else {
+            printf("Player %s terminated abnormally\n", state->players[i].playerName);
         }
         close(player_pipes[i]);
     }
+
     printf("---------------------------------------------------\n");
     printf("Player %s is the winner with a score of %d\n", state->players[winnerIndex].playerName, state->players[winnerIndex].score);
 

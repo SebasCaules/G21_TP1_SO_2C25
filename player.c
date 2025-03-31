@@ -8,7 +8,7 @@ void calculateNewPosition(unsigned char moveRequest, unsigned short *newX, unsig
 
 int main(int agrc, char *argv[]) {
 
-    srand(time(NULL) ^getpid());
+    srand(time(NULL) ^ getpid());
 
     size_t stateSize, syncSize;
 
@@ -36,7 +36,8 @@ int main(int agrc, char *argv[]) {
             sem_post(&sync->gameStateMutex);
             exit(EXIT_FAILURE);
         }
-        unsigned char moveRequest = rand() % 8;
+        unsigned char moveRequest;
+        moveRequest = rand() % 8;
         if (write(1, &moveRequest, sizeof(moveRequest)) == -1) {
             perror("write to pipe");
             player->isBlocked = true;
@@ -50,7 +51,7 @@ int main(int agrc, char *argv[]) {
             sem_post(&sync->writerEntryMutex);
         }
         sem_post(&sync->readersCountMutex);
-        usleep(100000);
+        usleep(100000); // ?
     }
 
     closeSHM(state, stateSize);
