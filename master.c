@@ -6,14 +6,15 @@
 #include <string.h>
 #include <math.h>
 #include <sys/wait.h>
+#include "colors.h"
 
 void parseArguments(int argc, char *argv[], unsigned short *width, unsigned short *height, unsigned int *delay, unsigned int *timeout, unsigned int *seed, char **viewPath, char *playerPaths[], int *numOfPlayers);
 void getPlayerInitialPosition(int playerIndex, int numOfPlayers, int width, int height, int *x, int *y);
 void fillBoard(GameState *state, unsigned int seed);
 void processMovement(pid_t jugadorPid, unsigned char moveRequest, GameState *state);
 bool areAllPlayersBlocked(GameState *state);
-void callPlayer(Semaphores *sync);
 void callView(Semaphores *sync);
+int compare_players(PlayerState *a, PlayerState *b);
 void addPlayersToBoard(GameState *state);
 
 int main(int argc, char *argv[]) {
@@ -26,7 +27,8 @@ int main(int argc, char *argv[]) {
     char *playerPaths[MAX_PLAYERS];
     int numOfPlayers = 0;
 
-    parseArguments(argc, argv, &width, &height, &delay, &timeout, &seed, &viewPath, playerPaths, &numOfPlayers);
+    parseArguments(argc, argv, &width, &height, &delay,
+    &timeout, &seed, &viewPath, playerPaths, &numOfPlayers);
     sleep(2);
 
     GameState *state = (GameState *)createSHM(SHM_STATE, sizeof(GameState) + width * height * sizeof(int), 0644);
@@ -36,6 +38,7 @@ int main(int argc, char *argv[]) {
     state->height = height;
     state->numOfPlayers = numOfPlayers;
     state->hasFinished = false;
+
     for (size_t i = 0; i < numOfPlayers; i++) {
         int x, y;
         getPlayerInitialPosition(i, numOfPlayers, width, height, &x, &y);
@@ -57,6 +60,7 @@ int main(int argc, char *argv[]) {
     sem_init(&sync->readersCountMutex, 1, 1);
     sync->activeReaders = 0;
 
+    // Width and Height int to string
     char width_str[8], height_str[8];
     snprintf(width_str, sizeof(width_str), "%d", state->width);
     snprintf(height_str, sizeof(height_str), "%d", state->height);
@@ -105,10 +109,11 @@ int main(int argc, char *argv[]) {
 
     fillBoard(state, seed);
     addPlayersToBoard(state);
+    // Print initial board
     callView(sync);
 
     time_t lastValidMove = time(NULL);
-
+    // Game loop
     while (!state->hasFinished) {
         for (int i = 0; i < numOfPlayers; i++) {
             sem_wait(&sync->gameStateMutex);
@@ -117,48 +122,36 @@ int main(int argc, char *argv[]) {
                 continue;
             }
             sem_post(&sync->gameStateMutex);
-    
-            sem_post(&sync->printNeeded);
-    
-            sem_wait(&sync->printFinished);
-    
+            callView(sync);
             unsigned char move;
             ssize_t bytesRead = read(player_pipes[i], &move, sizeof(move));
             if (bytesRead == sizeof(move)) {
                 sem_wait(&sync->gameStateMutex);
                 unsigned int validBefore = state->players[i].requestedValidMovements;
-    
                 processMovement(state->players[i].pid, move, state);
-    
                 if (state->players[i].requestedValidMovements > validBefore) {
                     lastValidMove = time(NULL);
                 }
                 sem_post(&sync->gameStateMutex);
             }
-
             sem_wait(&sync->gameStateMutex);
             bool allBlocked = areAllPlayersBlocked(state);
             sem_post(&sync->gameStateMutex);
             if (allBlocked) {
                 state->hasFinished = true;
-                callView(sync);
-                break;
             }
-
+            // Check timeout
             time_t now = time(NULL);
             if (difftime(now, lastValidMove) >= timeout) {
                 state->hasFinished = true;
-                callView(sync);
-                break;
+                
             }
-    
             usleep(delay * 1000);
         }
-
         if (state->hasFinished) {
+            callView(sync);
             break;
         }
-    
         callView(sync);
     }
 
@@ -176,49 +169,49 @@ int main(int argc, char *argv[]) {
     
     int winnerIndex = 0;
     for (int i = 0; i < numOfPlayers; i++) {
-        int status;
         pid_t pid = waitpid(state->players[i].pid, &status, 0);
         if (pid == -1) {
             perror("waitpid");
             continue;
         }
+        char *playerName = state->players[i].playerName;
+        const char *color = bodyColors[i];
         if (WIFEXITED(status)) {
-            printf("Player %s exited (%d) with score of %d / %d / %d\n", 
-                state->players[i].playerName, WEXITSTATUS(status), state->players[i].score,
+            printf("Player%s %s %sexited (%d) with score of %d / %d / %d\n", 
+                color, playerName, reset,
+                WEXITSTATUS(status), 
+                state->players[i].score,
                 state->players[i].requestedValidMovements,
                 state->players[i].requestedInvalidMovements);
-            if (state->players[i].score > state->players[winnerIndex].score) {
+            if (compare_players(&state->players[i], &state->players[winnerIndex]) > 0) {
                 winnerIndex = i;
-            } else if (state->players[i].score == state->players[winnerIndex].score) {
-                if (state->players[i].requestedValidMovements < state->players[winnerIndex].requestedValidMovements) {
-                    winnerIndex = i;
-                } else if (state->players[i].requestedValidMovements == state->players[winnerIndex].requestedValidMovements) {
-                    if (state->players[i].requestedInvalidMovements < state->players[winnerIndex].requestedInvalidMovements) {
-                        winnerIndex = i;
-                    }
-                    // falta caso de empate
-                }
             }
         } else if (WIFSIGNALED(status)) {
-            printf("Player %s killed by signal %d\n", state->players[i].playerName, WTERMSIG(status));
+            printf("Player%s %s %skilled by signal %d\n", 
+                color, playerName, reset,
+                WTERMSIG(status));
         } else {
-            printf("Player %s terminated abnormally\n", state->players[i].playerName);
+            printf("Player%s %s %sterminated abnormally\n", 
+                color, playerName, reset);
         }
+        // Closing all of the player pipes
         close(player_pipes[i]);
     }
 
-    printf("---------------------------------------------------\n");
-    printf("Player %s is the winner with a score of %d\n", state->players[winnerIndex].playerName, state->players[winnerIndex].score);
+    printf("---------------------------------------------------------\n");
+    printf("Player%s %s %sis the winner with a score of %d\n", bodyColors[winnerIndex],
+    state->players[winnerIndex].playerName, reset, state->players[winnerIndex].score);
 
+    // Closing and erasing semaphores
     sem_destroy(&sync->printNeeded);
     sem_destroy(&sync->printFinished);
     sem_destroy(&sync->writerEntryMutex);
     sem_destroy(&sync->gameStateMutex);
     sem_destroy(&sync->readersCountMutex);
     
+    // Erasing shared memory
     eraseSHM(SHM_STATE);
     eraseSHM(SHM_SYNC);
-
     return 0;   
 }
 
@@ -387,14 +380,18 @@ bool areAllPlayersBlocked(GameState *state) {
     return true;
 }
 
-void callPlayer(Semaphores *sync) {
+void callView(Semaphores *sync) {
     sem_post(&sync->printNeeded);
     sem_wait(&sync->printFinished);
 }
 
-void callView(Semaphores *sync) {
-    sem_post(&sync->printNeeded);
-    sem_wait(&sync->printFinished);
+int compare_players(PlayerState *a, PlayerState *b) {
+    if (a->score != b->score) return a->score > b->score;
+    if (a->requestedValidMovements != b->requestedValidMovements)
+        return a->requestedValidMovements < b->requestedValidMovements;
+    if (a->requestedInvalidMovements != b->requestedInvalidMovements)
+        return a->requestedInvalidMovements < b->requestedInvalidMovements;
+    return 0; // empate exacto
 }
 
 void addPlayersToBoard(GameState *state) {

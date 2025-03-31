@@ -50,7 +50,6 @@ void printBoard(GameState *state, int height, int width) {
                         break;
                     }
                 }
-
                 if (isHead) {
                     printf("%s%4d%s", headColors[playerIndex % 9], value, reset);
                 } else {
