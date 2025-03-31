@@ -102,18 +102,18 @@ int main(int argc, char *argv[]) {
         } else {
             // PADRE - máster
             close(pipefd[1]); // No escribe, solo lee
-            state->players[i].pid = pid;         // Guardamos el PID del jugador
-            player_pipes[i] = pipefd[0];         // Guardamos el FD de lectura
+            state->players[i].pid = pid; // Guardamos el PID del jugador
+            player_pipes[i] = pipefd[0]; // Guardamos el FD de lectura
         }
     }
 
     fillBoard(state, seed);
     addPlayersToBoard(state);
-    // Print initial board
+    // Imprime el tablero inicial
     callView(sync);
 
     time_t lastValidMove = time(NULL);
-    // Game loop
+    // Loop principal del juego
     while (!state->hasFinished) {
         for (int i = 0; i < numOfPlayers; i++) {
             sem_wait(&sync->gameStateMutex);
@@ -140,7 +140,7 @@ int main(int argc, char *argv[]) {
             if (allBlocked) {
                 state->hasFinished = true;
             }
-            // Check timeout
+            // Chequea si se acabó el tiempo
             time_t now = time(NULL);
             if (difftime(now, lastValidMove) >= timeout) {
                 state->hasFinished = true;
@@ -168,6 +168,8 @@ int main(int argc, char *argv[]) {
     }
     
     int winnerIndex = 0;
+    int drawIndex[MAX_PLAYERS];
+    int drawCount = 0;
     for (int i = 0; i < numOfPlayers; i++) {
         pid_t pid = waitpid(state->players[i].pid, &status, 0);
         if (pid == -1) {
@@ -178,14 +180,23 @@ int main(int argc, char *argv[]) {
         const char *color = bodyColors[i];
         if (WIFEXITED(status)) {
             printf("Player%s %s %sexited (%d) with score of %d / %d / %d\n", 
-                color, playerName, reset,
-                WEXITSTATUS(status), 
-                state->players[i].score,
-                state->players[i].requestedValidMovements,
-                state->players[i].requestedInvalidMovements);
-            if (compare_players(&state->players[i], &state->players[winnerIndex]) > 0) {
+                color, playerName, reset, WEXITSTATUS(status), state->players[i].score,
+                state->players[i].requestedValidMovements,state->players[i].requestedInvalidMovements);
+            // Comparacion de puntaje para sacar al ganador
+            int cmp = compare_players(&state->players[i], &state->players[winnerIndex]);
+            if (cmp < 0) {
                 winnerIndex = i;
+                drawCount = 1;
+                drawIndex[0] = i;
+            } else if (cmp == 0) {
+                if (i == winnerIndex) continue;
+                if (drawCount == 0) {
+                    drawIndex[0] = winnerIndex;
+                    drawCount = 1;
+                }
+                drawIndex[drawCount++] = i;
             }
+            // si cmp > 0 => el actual sigue siendo mejor
         } else if (WIFSIGNALED(status)) {
             printf("Player%s %s %skilled by signal %d\n", 
                 color, playerName, reset,
@@ -194,22 +205,35 @@ int main(int argc, char *argv[]) {
             printf("Player%s %s %sterminated abnormally\n", 
                 color, playerName, reset);
         }
-        // Closing all of the player pipes
+        // Cerramos el pipe de lectura
         close(player_pipes[i]);
     }
 
     printf("---------------------------------------------------------\n");
-    printf("Player%s %s %sis the winner with a score of %d\n", bodyColors[winnerIndex],
-    state->players[winnerIndex].playerName, reset, state->players[winnerIndex].score);
 
-    // Closing and erasing semaphores
+    if (drawCount > 1) {
+        printf("Players ");
+        for (int i = 0; i < drawCount; i++) {
+            printf("%s%s%s", bodyColors[drawIndex[i]],state->players[drawIndex[i]].playerName, reset);
+            if (i == drawCount - 2) printf(" and ");
+            else if (i < drawCount - 2) printf(", ");
+            }
+            printf(" tied with a score of %d / %d / %d\n", state->players[winnerIndex].score,
+                state->players[winnerIndex].requestedValidMovements,
+                state->players[winnerIndex].requestedInvalidMovements);
+    } else {
+        printf("Player%s %s %sis the winner with a score of %d\n", bodyColors[winnerIndex],
+            state->players[winnerIndex].playerName, reset, state->players[winnerIndex].score);
+    }
+
+    // Cerramos semáforos
     sem_destroy(&sync->printNeeded);
     sem_destroy(&sync->printFinished);
     sem_destroy(&sync->writerEntryMutex);
     sem_destroy(&sync->gameStateMutex);
     sem_destroy(&sync->readersCountMutex);
     
-    // Erasing shared memory
+    // Borramos memorias compartidas
     eraseSHM(SHM_STATE);
     eraseSHM(SHM_SYNC);
     return 0;   
@@ -386,11 +410,11 @@ void callView(Semaphores *sync) {
 }
 
 int compare_players(PlayerState *a, PlayerState *b) {
-    if (a->score != b->score) return a->score > b->score;
+    if (a->score != b->score) return (a->score > b->score) ? -1 : 1;
     if (a->requestedValidMovements != b->requestedValidMovements)
-        return a->requestedValidMovements < b->requestedValidMovements;
+        return (a->requestedValidMovements < b->requestedValidMovements) ? -1 : 1;
     if (a->requestedInvalidMovements != b->requestedInvalidMovements)
-        return a->requestedInvalidMovements < b->requestedInvalidMovements;
+        return (a->requestedInvalidMovements < b->requestedInvalidMovements) ? -1 : 1;
     return 0; // empate exacto
 }
 
