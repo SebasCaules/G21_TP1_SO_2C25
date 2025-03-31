@@ -14,7 +14,7 @@ void fillBoard(GameState *state, unsigned int seed);
 void processMovement(pid_t jugadorPid, unsigned char moveRequest, GameState *state);
 bool areAllPlayersBlocked(GameState *state);
 void callView(Semaphores *sync);
-int compare_players(PlayerState *a, PlayerState *b);
+int comparePlayers(PlayerState *a, PlayerState *b);
 void addPlayersToBoard(GameState *state);
 
 int main(int argc, char *argv[]) {
@@ -27,8 +27,7 @@ int main(int argc, char *argv[]) {
     char *playerPaths[MAX_PLAYERS];
     int numOfPlayers = 0;
 
-    parseArguments(argc, argv, &width, &height, &delay,
-    &timeout, &seed, &viewPath, playerPaths, &numOfPlayers);
+    parseArguments(argc, argv, &width, &height, &delay, &timeout, &seed, &viewPath, playerPaths, &numOfPlayers);
     sleep(2);
 
     GameState *state = (GameState *)createSHM(SHM_STATE, sizeof(GameState) + width * height * sizeof(int), 0644);
@@ -60,7 +59,7 @@ int main(int argc, char *argv[]) {
     sem_init(&sync->readersCountMutex, 1, 1);
     sync->activeReaders = 0;
 
-    // Width and Height int to string
+    // width and height int to string
     char width_str[8], height_str[8];
     snprintf(width_str, sizeof(width_str), "%d", state->width);
     snprintf(height_str, sizeof(height_str), "%d", state->height);
@@ -183,7 +182,7 @@ int main(int argc, char *argv[]) {
                 color, playerName, reset, WEXITSTATUS(status), state->players[i].score,
                 state->players[i].requestedValidMovements,state->players[i].requestedInvalidMovements);
             // Comparacion de puntaje para sacar al ganador
-            int cmp = compare_players(&state->players[i], &state->players[winnerIndex]);
+            int cmp = comparePlayers(&state->players[i], &state->players[winnerIndex]);
             if (cmp < 0) {
                 winnerIndex = i;
                 drawCount = 1;
@@ -346,51 +345,50 @@ void processMovement(pid_t playerPID, unsigned char moveRequest, GameState *stat
     int dx[] = {  0,  1,  1,  1,  0, -1, -1, -1 };
     int dy[] = { -1, -1,  0,  1,  1,  1,  0, -1 };
 
-    int new_x = player->x + dx[moveRequest % 8];
-    int new_y = player->y + dy[moveRequest % 8];
+    int newX = player->x + dx[moveRequest % 8];
+    int newY = player->y + dy[moveRequest % 8];
 
-    bool dentroDelTablero =
-        new_x >= 0 && new_x < state->width &&
-        new_y >= 0 && new_y < state->height;
+    bool isWithinBounds =
+        newX >= 0 && newX < state->width &&
+        newY >= 0 && newY < state->height;
 
-    bool celdaLibre = false;
-    int valorCelda = 0;
+    bool isCellFree = false;
+    int cellValue = 0;
 
-    if (dentroDelTablero) {
-        valorCelda = state->board[new_y * state->width + new_x];
-        if (valorCelda > 0) {
-            celdaLibre = true;
+    if (isWithinBounds) {
+        cellValue = state->board[newY * state->width + newX];
+        if (cellValue > 0) {
+            isCellFree = true;
         }
     }
 
-    bool movimiento_valido = dentroDelTablero && celdaLibre;
+    bool isValidMove = isWithinBounds && isCellFree;
 
-    if (movimiento_valido) {
-        player->score += valorCelda;
-        player->x = new_x;
-        player->y = new_y;
+    if (isValidMove) {
+        player->score += cellValue;
+        player->x = newX;
+        player->y = newY;
 
         int index = (int)(player - state->players);
-        state->board[new_y * state->width + new_x] = -index;
+        state->board[newY * state->width + newX] = -index;
 
         player->requestedValidMovements++;
     } else {
         player->requestedInvalidMovements++;
     }
 
-    bool puede_moverse = false;
+    bool canMove = false;
     for (int d = 0; d < 8; d++) {
         int tx = player->x + dx[d];
         int ty = player->y + dy[d];
-        if (tx >= 0 && tx < state->width &&
-            ty >= 0 && ty < state->height &&
+        if (tx >= 0 && tx < state->width && ty >= 0 && ty < state->height && 
             state->board[ty * state->width + tx] > 0) {
-            puede_moverse = true;
+            canMove = true;
             break;
         }
     }
 
-    if (!puede_moverse) {
+    if (!canMove) {
         player->isBlocked = true;
     }
 }
@@ -409,7 +407,7 @@ void callView(Semaphores *sync) {
     sem_wait(&sync->printFinished);
 }
 
-int compare_players(PlayerState *a, PlayerState *b) {
+int comparePlayers(PlayerState *a, PlayerState *b) {
     if (a->score != b->score) return (a->score > b->score) ? -1 : 1;
     if (a->requestedValidMovements != b->requestedValidMovements)
         return (a->requestedValidMovements < b->requestedValidMovements) ? -1 : 1;
