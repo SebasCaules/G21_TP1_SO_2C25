@@ -53,10 +53,8 @@ int main(int agrc, char *argv[]) {
         sem_post(&sync->readersCountMutex);
         usleep(100000); // ?
     }
-
     closeSHM(state, stateSize);
     closeSHM(sync, syncSize);
-
     return 0;
 }
 

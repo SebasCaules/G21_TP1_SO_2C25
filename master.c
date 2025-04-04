@@ -1,12 +1,10 @@
-#include <stdbool.h>
-#include <stdio.h>
 #include "shmlib.h"
 #include "model.h"
-#include <time.h>
-#include <string.h>
+#include "colors.h"
+#include <getopt.h>
 #include <math.h>
 #include <sys/wait.h>
-#include "colors.h"
+#include <time.h>
 
 void parseArguments(int argc, char *argv[], unsigned short *width, unsigned short *height, unsigned int *delay, unsigned int *timeout, unsigned int *seed, char **viewPath, char *playerPaths[], int *numOfPlayers);
 void getPlayerInitialPosition(int playerIndex, int numOfPlayers, int width, int height, int *x, int *y);
@@ -69,8 +67,8 @@ int main(int argc, char *argv[]) {
         perror("fork");
         exit(EXIT_FAILURE);
     } else if (view_pid == 0) {
-        char *args[] = { VIEW_PATH, width_str, height_str, NULL };
-        execv(VIEW_PATH, args);
+        char *args[] = { viewPath, width_str, height_str, NULL };
+        execv(viewPath, args);
         perror("execv view");
         exit(EXIT_FAILURE);
     }

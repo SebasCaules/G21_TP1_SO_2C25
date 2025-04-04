@@ -1,12 +1,10 @@
 #include <sys/types.h>
 #include <semaphore.h>
+#include <stdbool.h>
 
 // Share memory names
 #define SHM_STATE "/game_state"
 #define SHM_SYNC "/game_sync"
-
-// File names
-#define VIEW_PATH "./view"
 
 // Game constants
 #define HEIGHT 10

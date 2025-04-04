@@ -3,11 +3,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/mman.h>
-#include <unistd.h>
 #include <sys/stat.h>  /* For mode constants */
 #include <fcntl.h>     /* For O_* constants */
 #include <sys/wait.h>
 #include <semaphore.h> // Corrected include
+#include <unistd.h>    // Added for ftruncate
 
 void *createSHM(char *name, size_t size, mode_t mode) {
     int fd; 
