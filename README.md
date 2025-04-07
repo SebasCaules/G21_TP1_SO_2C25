@@ -139,7 +139,3 @@ Player player (2) is the winner with a score of 183
 ## Autor
 
 Trabajo práctico realizado por Alexis Herrera Vegas, Sebastian Caules y Federico Kloberdanz para la materia 72.11 - Sistemas Operativo.
-
-## Licencia
-
-ITBA
