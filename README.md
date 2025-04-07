@@ -4,13 +4,15 @@ ChompChamps es un juego concurrente por turnos, implementado en C, donde múltip
 
 ## Estructura del proyecto
 
+```bash
 .
-├── master.c         # Proceso principal: coordina el juego, jugadores y vista
-├── player.c         # Lógica de cada jugador (proceso independiente)
-├── view.c           # Proceso de vista, imprime el estado del juego
-├── shmlib.c/.h      # Biblioteca para manejo de memoria compartida y semáforos
-├── Makefile         # Compila y ejecuta el proyecto
+├── master.c        # Proceso principal: coordina el juego, jugadores y vista
+├── player.c        # Lógica de cada jugador (proceso independiente)
+├── view.c          # Proceso de vista, imprime el estado del juego
+├── shmlib.c/.h     # Biblioteca para manejo de memoria compartida y semáforos
+├── Makefile        # Compila y ejecuta el proyecto
 └── README.md
+```
 
 ## Requisitos
 
