@@ -123,7 +123,7 @@ Tablero (10x10) | 2 jugadores
 
 ## Autor
 
-Trabajo práctico realizado para la materia de Sistemas Operativos / Programación Concurrente.
+Trabajo práctico realizado por Alexis Herrera Vegas, Sebastian Caules y Federico Kloberdanz para la materia 72.11 - Sistemas Operativo.
 
 ## Licencia
 
