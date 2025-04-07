@@ -111,17 +111,30 @@ make clean
 
 ## Ejemplo de salida
 
-Jugador: player
-Puntaje: 124
-Movs válidos: 21
-Movs inválidos: 7
-Posición: (3,5)
+```bash
+Jugador: player (0)    | Puntaje:    73 | Inválidos: 33 | Válidos: 19 | Posición: ( 9,  8) | Bloqueado
+Jugador: player (1)    | Puntaje:    67 | Inválidos:  8 | Válidos: 13 | Posición: ( 7,  7) | Bloqueado
+Jugador: player (2)    | Puntaje:   183 | Inválidos: 26 | Válidos: 32 | Posición: ( 0,  0) | Bloqueado
 
-Tablero (10x10) | 2 jugadores
-8   7   5   6   1  -1   3   2   9   4
-7   8   0   9   4  -1   3   4   5   7
-6   4   8   2   5   9   4   6   4   1
-…
+Tablero (10x10) | 3 jugadores
+ -2 -2 -2 -2  2  7 -2 -2 -2  3
+ -2 -2 -2 -2 -2 -2  5 -2 -2 -2
+  4  1  0  2  5  4  4 -2 -2 -2
+  4  4  2  3  1  0  4 -2 -2 -2
+  8  4  1  0  4 -1 -1 -2 -2 -2
+  4  4  9  4 -1 -1 -1 -2 -2  2
+  8  9  3  0 -2 -2 -1 -2 -2  2
+  9  7 -2 -2 -2 -2 -1 -2 -1 -1
+  1 -2 -2  0  0  0 -2 -1  0 -1
+  6  3  4  6  8  3  0 -1 -1  0
+
+View exited (0)
+Player player (0) exited (0) with score of  73 / 19 / 33
+Player player (1) exited (0) with score of  67 / 13 /  8
+Player player (2) exited (0) with score of 183 / 32 / 26
+__________________________________________________________
+Player player (2) is the winner with a score of 183
+```
 
 ## Autor
 
