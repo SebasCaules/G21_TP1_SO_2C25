@@ -5,6 +5,7 @@
 #include <math.h>
 #include <sys/wait.h>
 #include <time.h>
+#include <unistd.h>
 
 void parseArguments(int argc, char *argv[], unsigned short *width, unsigned short *height, unsigned int *delay, unsigned int *timeout, unsigned int *seed, char **viewPath, char *playerPaths[], int *numOfPlayers);
 void getPlayerInitialPosition(int playerIndex, int numOfPlayers, int width, int height, int *x, int *y);
@@ -26,6 +27,7 @@ int main(int argc, char *argv[]) {
     int numOfPlayers = 0;
 
     parseArguments(argc, argv, &width, &height, &delay, &timeout, &seed, &viewPath, playerPaths, &numOfPlayers);
+    
     sleep(2);
 
     GameState *state = (GameState *)createSHM(SHM_STATE, sizeof(GameState) + width * height * sizeof(int), 0644);
@@ -62,15 +64,19 @@ int main(int argc, char *argv[]) {
     snprintf(width_str, sizeof(width_str), "%d", state->width);
     snprintf(height_str, sizeof(height_str), "%d", state->height);
 
-    pid_t view_pid = fork();
-    if(view_pid == -1){
-        perror("fork");
-        exit(EXIT_FAILURE);
-    } else if (view_pid == 0) {
-        char *args[] = { viewPath, width_str, height_str, NULL };
-        execv(viewPath, args);
-        perror("execv view");
-        exit(EXIT_FAILURE);
+    pid_t view_pid;
+
+    if (viewPath != NULL) {
+        view_pid = fork();
+        if(view_pid == -1){
+            perror("fork");
+            exit(EXIT_FAILURE);
+        } else if (view_pid == 0) {
+            char *args[] = { viewPath, width_str, height_str, NULL };
+            execv(viewPath, args);
+            perror("execv view");
+            exit(EXIT_FAILURE);
+        }
     }
 
     int player_pipes[MAX_PLAYERS]; // Guardar file descriptors para leer de los jugadores
@@ -107,7 +113,9 @@ int main(int argc, char *argv[]) {
     fillBoard(state, seed);
     addPlayersToBoard(state);
     // Imprime el tablero inicial
-    callView(sync);
+    if (viewPath != NULL) {
+        callView(sync);
+    }
 
     time_t lastValidMove = time(NULL);
     // Loop principal del juego
@@ -119,7 +127,9 @@ int main(int argc, char *argv[]) {
                 continue;
             }
             sem_post(&sync->gameStateMutex);
-            callView(sync);
+            if (viewPath != NULL) {
+                callView(sync);
+            }
             unsigned char move;
             ssize_t bytesRead = read(player_pipes[i], &move, sizeof(move));
             if (bytesRead == sizeof(move)) {
@@ -146,22 +156,29 @@ int main(int argc, char *argv[]) {
             usleep(delay * 1000);
         }
         if (state->hasFinished) {
-            callView(sync);
+            if (viewPath != NULL) {
+                callView(sync);
+            }
             break;
         }
-        callView(sync);
+        if (viewPath != NULL) {
+            callView(sync);
+        }
     }
 
     int status;
-    pid_t pid = waitpid(view_pid, &status, 0);
-    if (pid == -1) {
-        perror("waitpid for view process");
-    } else if (WIFEXITED(status)) {
-        printf("View exited (%d)\n", WEXITSTATUS(status));
-    } else if (WIFSIGNALED(status)) {
-        printf("View process was terminated by signal %d\n", WTERMSIG(status));
-    } else {
-        printf("View process terminated abnormally\n");
+
+    if (viewPath != NULL) {
+        pid_t pid = waitpid(view_pid, &status, 0);
+        if (pid == -1) {
+            perror("waitpid for view process");
+        } else if (WIFEXITED(status)) {
+            printf("View exited (%d)\n", WEXITSTATUS(status));
+        } else if (WIFSIGNALED(status)) {
+            printf("View process was terminated by signal %d\n", WTERMSIG(status));
+        } else {
+            printf("View process terminated abnormally\n");
+        }
     }
     
     int winnerIndex = 0;
@@ -294,7 +311,7 @@ void parseArguments(int argc, char *argv[], unsigned short *width, unsigned shor
     printf("delay: %d ms\n", *delay);
     printf("timeout: %d\n", *timeout);
     printf("seed: %d\n", *seed);
-    printf("view: %s\n", *viewPath);
+    printf("view: %s\n", *viewPath == NULL ? "-" : *viewPath);
     printf("num_players: %d\n", *numOfPlayers);
     for (int i = 0; i < *numOfPlayers; i++) {
         printf("  %s\n", playerPaths[i]);
