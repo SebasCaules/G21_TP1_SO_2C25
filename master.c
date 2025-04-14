@@ -13,7 +13,7 @@
 void parseArguments(int argc, char *argv[], unsigned short *width, unsigned short *height, unsigned int *delay, unsigned int *timeout, unsigned int *seed, char **viewPath, char *playerPaths[], int *numOfPlayers);
 void getPlayerInitialPosition(int playerIndex, int numOfPlayers, int width, int height, int *x, int *y);
 void fillBoard(GameState *state, unsigned int seed);
-void processMovement(pid_t jugadorPid, unsigned char moveRequest, GameState *state);
+void processMovement(PlayerState *player, unsigned char moveRequest, GameState *state);
 bool areAllPlayersBlocked(GameState *state);
 void callView(Semaphores *sync);
 int comparePlayers(PlayerState *a, PlayerState *b);
@@ -137,9 +137,10 @@ int main(int argc, char *argv[]) {
             ssize_t bytesRead = read(player_pipes[i], &move, sizeof(move));
             if (bytesRead == sizeof(move)) {
                 sem_wait(&sync->gameStateMutex);
-                unsigned int validBefore = state->players[i].requestedValidMovements;
-                processMovement(state->players[i].pid, move, state);
-                if (state->players[i].requestedValidMovements > validBefore) {
+                PlayerState *player = &state->players[i];
+                unsigned int validBefore = player->requestedValidMovements;
+                processMovement(player, move, state);
+                if (player->requestedValidMovements > validBefore) {
                     lastValidMove = time(NULL);
                 }
                 sem_post(&sync->gameStateMutex);
@@ -353,14 +354,7 @@ void fillBoard(GameState *state, unsigned int seed) {
     }
 }
 
-void processMovement(pid_t playerPID, unsigned char moveRequest, GameState *state) {
-    PlayerState *player = NULL;
-    for (int i = 0; i < state->numOfPlayers; i++) {
-        if (state->players[i].pid == playerPID) {
-            player = &state->players[i];
-            break;
-        }
-    }
+void processMovement(PlayerState *player, unsigned char moveRequest, GameState *state) {
     if (!player || player->isBlocked) return;
 
 
