@@ -8,6 +8,7 @@
 #include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
+#include "validateLib.h"
 
 void parseArguments(int argc, char *argv[], unsigned short *width, unsigned short *height, unsigned int *delay, unsigned int *timeout, unsigned int *seed, char **viewPath, char *playerPaths[], int *numOfPlayers);
 void getPlayerInitialPosition(int playerIndex, int numOfPlayers, int width, int height, int *x, int *y);
@@ -362,30 +363,15 @@ void processMovement(pid_t playerPID, unsigned char moveRequest, GameState *stat
     }
     if (!player || player->isBlocked) return;
 
-    int dx[] = {  0,  1,  1,  1,  0, -1, -1, -1 };
-    int dy[] = { -1, -1,  0,  1,  1,  1,  0, -1 };
 
-    int newX = player->x + dx[moveRequest % 8];
-    int newY = player->y + dy[moveRequest % 8];
+    int newX, newY, dx, dy;
+    positionAfterMove(moveRequest, &newX, &newY, player->x, player->y);
+    directionBreakdown(moveRequest, &dx, &dy);
 
-    bool isWithinBounds =
-        newX >= 0 && newX < state->width &&
-        newY >= 0 && newY < state->height;
-
-    bool isCellFree = false;
-    int cellValue = 0;
-
-    if (isWithinBounds) {
-        cellValue = state->board[newY * state->width + newX];
-        if (cellValue > 0) {
-            isCellFree = true;
-        }
-    }
-
-    bool isValidMove = isWithinBounds && isCellFree;
+    bool isValidMove = isValid(state, newX, newY);
 
     if (isValidMove) {
-        player->score += cellValue;
+        player->score += state->board[newY * state->width + newX];
         player->x = newX;
         player->y = newY;
 
@@ -399,8 +385,8 @@ void processMovement(pid_t playerPID, unsigned char moveRequest, GameState *stat
 
     bool canMove = false;
     for (int d = 0; d < 8; d++) {
-        int tx = player->x + dx[d];
-        int ty = player->y + dy[d];
+        int tx = player->x + directionX(d);
+        int ty = player->y + directionY(d);
         if (tx >= 0 && tx < state->width && ty >= 0 && ty < state->height && 
             state->board[ty * state->width + tx] > 0) {
             canMove = true;

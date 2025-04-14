@@ -14,17 +14,20 @@ compile: clean_shm $(BINARIES)
 
 clean: clean_shm clean_bin clean_pvs
 
-master: master.c shmlib.o
-	$(CC) $(CFLAGS) -o master master.c shmlib.o $(LDFLAGS)
+master: master.c shmlib.o validateLib.o
+	$(CC) $(CFLAGS) -o master master.c shmlib.o validateLib.o $(LDFLAGS)
 
-player: player.c shmlib.o
-	$(CC) $(CFLAGS) -o player player.c shmlib.o $(LDFLAGS)
+player: player.c shmlib.o validateLib.o
+	$(CC) $(CFLAGS) -o player player.c shmlib.o validateLib.o $(LDFLAGS)
 
-view: view.c shmlib.o
-	$(CC) $(CFLAGS) -o view view.c shmlib.o $(LDFLAGS)
+view: view.c shmlib.o validateLib.o
+	$(CC) $(CFLAGS) -o view view.c shmlib.o validateLib.o $(LDFLAGS)
 
 shmlib.o: shmlib.c shmlib.h
 	$(CC) $(CFLAGS) -c shmlib.c -o shmlib.o
+
+validateLib.o: validateLib.c validateLib.h
+	$(CC) $(CFLAGS) -c validateLib.c -o validateLib.o
 
 run:
 	$(RUN_CMD)
@@ -34,7 +37,7 @@ clean_shm:
 	@if [ -e /dev/shm/game_sync ]; then rm /dev/shm/game_sync; fi
 
 clean_bin:
-	@for f in $(BINARIES) shmlib.o; do \
+	@for f in $(BINARIES) shmlib.o validateLib.o; do \
 		if [ -f $$f ]; then rm $$f; fi \
 	done
 
@@ -45,7 +48,6 @@ clean_pvs:
 
 valgrind-check: compile
 	valgrind $(VALFLAGS) $(RUN_CMD)
-	clean
 
 pvs-check:
 	pvs-studio-analyzer trace -- make compile

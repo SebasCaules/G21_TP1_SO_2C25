@@ -7,10 +7,9 @@
 #include "model.h"
 #include <math.h>
 #include <unistd.h>
+#include "validateLib.h"
 
-void calculateNewPosition(unsigned char moveRequest, int *newX, int *newY, unsigned short x, unsigned short y);
 unsigned char calculateBestMove(PlayerState *player, GameState *state);
-bool isValid(GameState *state, int x, int y);
 int adjacentFreeCells(GameState *state, unsigned short x, unsigned short y);
 int riskFromEnemies(GameState *state, unsigned short x, unsigned short y);
 unsigned int calculateDistanceToWall(GameState *state, unsigned short x, unsigned short y);
@@ -74,7 +73,7 @@ unsigned char calculateBestMove(PlayerState *player, GameState *state) {
 
     for(unsigned char dir = 0; dir < 8; dir++) {
         int newX, newY;
-        calculateNewPosition(dir, &newX, &newY, player->x, player->y);
+        positionAfterMove(dir, &newX, &newY, player->x, player->y);
 
         if(isValid(state, newX, newY)) {
             int score = evaluateCell(state, newX, newY);
@@ -89,25 +88,13 @@ unsigned char calculateBestMove(PlayerState *player, GameState *state) {
     return bestDirection;
 }
 
-bool isValid(GameState *state, int x, int y) {
-    bool isWithinBounds =
-        x >= 0 && x < state->width &&
-        y >= 0 && y < state->height;
-
-    if (!isWithinBounds) {
-        return false;
-    }
-
-    int cellValue = state->board[y * state->width + x];
-    return cellValue > 0;
-}
 
 int adjacentFreeCells(GameState *state, unsigned short x, unsigned short y) {
     int count = 0;
     int newX, newY;
 
     for(unsigned char dir = 0; dir < 8; dir++) {
-        calculateNewPosition(dir, &newX, &newY, x, y);
+        positionAfterMove(dir, &newX, &newY, x, y);
         if(isValid(state, newX, newY)) {
             count++;
         }
@@ -149,16 +136,3 @@ int evaluateCell(GameState *state, unsigned short x, unsigned short y) {
     return reward * 5 + freeSpaces * 2 - distanceToWall - risk;
 }
 
-
-void calculateNewPosition(unsigned char moveRequest, int *newX, int *newY, unsigned short x, unsigned short y) {
-    switch (moveRequest) {
-        case 0: *newY = y - 1; *newX = x;     break; // Up
-        case 1: *newY = y - 1; *newX = x + 1; break; // Up-Right
-        case 2: *newY = y;     *newX = x + 1; break; // Right
-        case 3: *newY = y + 1; *newX = x + 1; break; // Down-Right
-        case 4: *newY = y + 1; *newX = x;     break; // Down
-        case 5: *newY = y + 1; *newX = x - 1; break; // Down-Left
-        case 6: *newY = y;     *newX = x - 1; break; // Left
-        case 7: *newY = y - 1; *newX = x - 1; break; // Up-Left
-    }
-}

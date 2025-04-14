@@ -1,3 +1,6 @@
+#ifndef MODEL_DEFINED
+#define MODEL_DEFINED
+
 #include <sys/types.h>
 #include <semaphore.h>
 #include <stdbool.h>
@@ -40,3 +43,5 @@ typedef struct {
     sem_t readersCountMutex; // Mutex para la siguiente variable
     unsigned int activeReaders; // Cantidad de jugadores leyendo el estado
 } Semaphores;
+
+#endif
