@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -std=c99
+CFLAGS = -Wall -std=c99 -D_XOPEN_SOURCE=500
 LDFLAGS = -lm -lrt -lpthread
 VALFLAGS = --leak-check=full --track-origins=yes
 

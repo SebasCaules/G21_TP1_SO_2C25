@@ -6,6 +6,7 @@
 #include "shmlib.h"
 #include "model.h"
 #include <math.h>
+#include <unistd.h>
 
 void calculateNewPosition(unsigned char moveRequest, int *newX, int *newY, unsigned short x, unsigned short y);
 unsigned char calculateBestMove(PlayerState *player, GameState *state);
