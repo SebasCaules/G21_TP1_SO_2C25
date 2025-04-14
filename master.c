@@ -155,7 +155,7 @@ int main(int argc, char *argv[]) {
             time_t now = time(NULL);
             if (difftime(now, lastValidMove) >= timeout) {
                 state->hasFinished = true;
-                
+                break;
             }
             usleep(delay * 1000);
         }
