@@ -3,8 +3,15 @@
 #include <time.h>
 #include "shmlib.h"
 #include "model.h"
+#include <math.h>
 
-void calculateNewPosition(unsigned char moveRequest, unsigned short *newX, unsigned short *newY, unsigned short x, unsigned short y);
+void calculateNewPosition(unsigned char moveRequest, int *newX, int *newY, unsigned short x, unsigned short y);
+unsigned char calculateBestMove(PlayerState *player, GameState *state);
+bool isValid(GameState *state, int x, int y);
+int adjacentFreeCells(GameState *state, unsigned short x, unsigned short y);
+int riskFromEnemies(GameState *state, unsigned short x, unsigned short y);
+unsigned int calculateDistanceToWall(GameState *state, unsigned short x, unsigned short y);
+int evaluateCell(GameState *state, unsigned short x, unsigned short y);
 
 int main(int agrc, char *argv[]) {
 
@@ -37,7 +44,7 @@ int main(int agrc, char *argv[]) {
             exit(EXIT_FAILURE);
         }
         unsigned char moveRequest;
-        moveRequest = rand() % 8;
+        moveRequest = calculateBestMove(player, state);
         if (write(1, &moveRequest, sizeof(moveRequest)) == -1) {
             perror("write to pipe");
             player->isBlocked = true;
@@ -51,14 +58,98 @@ int main(int agrc, char *argv[]) {
             sem_post(&sync->writerEntryMutex);
         }
         sem_post(&sync->readersCountMutex);
-        usleep(100000); // ?
+        usleep(150000);
     }
     closeSHM(state, stateSize);
     closeSHM(sync, syncSize);
     return 0;
 }
 
-void calculateNewPosition(unsigned char moveRequest, unsigned short *newX, unsigned short *newY, unsigned short x, unsigned short y) {
+unsigned char calculateBestMove(PlayerState *player, GameState *state) {
+    int bestScore = -1;
+    int bestDirection = -1;
+
+    for(unsigned char dir = 0; dir < 8; dir++) {
+        int newX, newY;
+        calculateNewPosition(dir, &newX, &newY, player->x, player->y);
+
+        if(isValid(state, newX, newY)) {
+            int score = evaluateCell(state, newX, newY);
+            //como bestScore arranca en -1 garantizo que aunque sea 1 movimiento va a ser el mejor
+            //y no va a quedar el -1
+            if(score > bestScore) {
+                bestScore = score;
+                bestDirection = dir;
+            }
+        }
+    }
+    return bestDirection;
+}
+
+bool isValid(GameState *state, int x, int y) {
+    bool isWithinBounds =
+        x >= 0 && x < state->width &&
+        y >= 0 && y < state->height;
+
+    if (!isWithinBounds) {
+        return false;
+    }
+
+    int cellValue = state->board[y * state->width + x];
+    return cellValue > 0;
+
+    return isValid;
+}
+
+int adjacentFreeCells(GameState *state, unsigned short x, unsigned short y) {
+    int count = 0;
+    int newX, newY;
+
+    for(unsigned char dir = 0; dir < 8; dir++) {
+        calculateNewPosition(dir, &newX, &newY, x, y);
+        if(isValid(state, newX, newY)) {
+            count++;
+        }
+    }
+
+    return count;
+}
+
+int riskFromEnemies(GameState *state, unsigned short x, unsigned short y) {
+    int risk = 0;
+    PlayerState enemy;
+    int distance;
+
+    for(int i = 0; i < state->numOfPlayers; i++) {
+        enemy = state->players[i];
+
+        distance = fmax(fabs(x - enemy.x), fabs(y - enemy.y));
+
+        //si enemy es el mismo player no pasa nada, distance dara 0
+        if(distance == 1) {
+            risk += 2;
+        } else if(distance == 2) {
+            risk +=1;
+        }
+    }
+    return risk;
+}
+
+unsigned int calculateDistanceToWall(GameState *state, unsigned short x, unsigned short y) {
+    return fmin(fmin(fmin(x, y), state->width - x), state->height - y);
+}
+
+int evaluateCell(GameState *state, unsigned short x, unsigned short y) {
+    int reward = state->board[y * state->width + x];
+    int freeSpaces = adjacentFreeCells(state, x, y);
+    int distanceToWall = calculateDistanceToWall(state, x, y);
+    int risk = riskFromEnemies(state, x, y);
+
+    return reward * 5 + freeSpaces * 2 - distanceToWall - risk;
+}
+
+
+void calculateNewPosition(unsigned char moveRequest, int *newX, int *newY, unsigned short x, unsigned short y) {
     switch (moveRequest) {
         case 0: *newY = y - 1; *newX = x;     break; // Up
         case 1: *newY = y - 1; *newX = x + 1; break; // Up-Right
