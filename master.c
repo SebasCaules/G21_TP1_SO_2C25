@@ -179,6 +179,9 @@ int main(int argc, char *argv[]) {
         } else {
             printf("View process terminated abnormally\n");
         }
+    } else {
+        printf("\033[H\033[J"); 
+        fflush(stdout);
     }
     
     int winnerIndex = 0;

@@ -17,12 +17,6 @@ int main(int argc, char *argv[]) {
     GameState* state = (GameState*) openSHM(SHM_STATE, O_RDONLY, &stateSize);
     Semaphores* sync = (Semaphores*) openSHM(SHM_SYNC, O_RDWR, &syncSize);
 
-    // initscr();
-    // noecho();
-    // curs_set(0);
-    // start_color();
-    // init_pair(...) de colores de cabeza y cuerpo
-
     while (!state->hasFinished) {
         sem_wait(&sync->printNeeded);
         printf("\033[H\033[J");
@@ -33,9 +27,6 @@ int main(int argc, char *argv[]) {
         printBoard(state, height, width);
         sem_post(&sync->printFinished);
     }
-
-    
-    
 
     closeSHM(state, stateSize);
     closeSHM(sync, syncSize);
@@ -71,33 +62,6 @@ void printBoard(GameState *state, int height, int width) {
         printf("\n");
     }
 }
-
-// void printBoardNcurses(GameState *state, int height, int width, int start_y, int start_x) {
-//     mvprintw(start_y, start_x, "Tablero (%dx%d) | %d jugadores", width, height, state->numOfPlayers);
-//     for (int x = 0; x < height; x++) {
-//         for (int y = 0; y < width; y++) {
-//             int value = state->board[x * width + y];
-//             if (value <= 0) {
-//                 int playerIndex = -value;
-//                 bool isHead = false;
-//                 for (int i = 0; i < state->numOfPlayers; i++) {
-//                     if (state->players[i].x == y && state->players[i].y == x && playerIndex == i) {
-//                         isHead = true;
-//                         break;
-//                     }
-//                 }
-//                 int color_pair = isHead ? (10 + (playerIndex % 9)) : (1 + (playerIndex % 9));
-//                 attron(COLOR_PAIR(color_pair));
-//                 mvprintw(start_y + 1 + x, start_x + y * 4, "%3d", value);
-//                 attroff(COLOR_PAIR(color_pair));
-//             } else {
-//                 mvprintw(start_y + 1 + x, start_x + y * 4, "%3d", value);
-//             }
-//         }
-//     }
-//     refresh();
-// }
-
 
 void printPlayerData(PlayerState player, int index) {
     // Print the player's name in its corresponding color
