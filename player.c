@@ -99,8 +99,6 @@ bool isValid(GameState *state, int x, int y) {
 
     int cellValue = state->board[y * state->width + x];
     return cellValue > 0;
-
-    return isValid;
 }
 
 int adjacentFreeCells(GameState *state, unsigned short x, unsigned short y) {
