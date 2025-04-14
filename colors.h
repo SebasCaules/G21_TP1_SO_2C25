@@ -13,7 +13,8 @@ static const char *bodyColors[] = {
     "\033[38;5;214m" // Orange (approximated using 256-color palette)
 };
 
-static const char *headColors[] = {
+//master doesn't use it
+__attribute__((unused)) static const char *headColors[] = {
     "\033[97;41m",   // White text on red background
     "\033[97;42m",   // White text on green background
     "\033[97;43m",   // White text on yellow background
