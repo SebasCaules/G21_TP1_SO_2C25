@@ -1,5 +1,3 @@
-// This is a personal academic project. Dear PVS-Studio, please check it.
-// PVS-Studio Static Code Analyzer for C, C++, C#, and Java: https://pvs-studio.com
 #include <stdbool.h>
 #include <stdio.h>
 #include "shmlib.h"
@@ -66,15 +64,13 @@ void printBoard(GameState *state, int height, int width) {
 }
 
 void printPlayerData(PlayerState player, int index) {
-    // Print the player's name in its corresponding color
     printf("Jugador: %s%-16s%s | Puntaje: %6d | Inválidos: %3d | Válidos: %3d | Posición: (%2d, %2d) %-3s\n",
-           bodyColors[index % 9], // Color for the player's name
-           player.playerName,     // Player name
-           reset,                 // Reset color after the name
-           player.score,          // Player score
-           player.requestedInvalidMovements, // Invalid movements
-           player.requestedValidMovements,   // Valid movements
-           player.x,              // X coordinate
-           player.y,              // Y coordinate
-           player.isBlocked ? "| Bloqueado" : ""); // Blocked status
+        bodyColors[index % 9], 
+        player.playerName, reset, 
+        player.score, 
+        player.requestedInvalidMovements, 
+        player.requestedValidMovements,
+        player.x, 
+        player.y, 
+        player.isBlocked ? "| Bloqueado" : "");
 }

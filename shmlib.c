@@ -1,15 +1,12 @@
-// This is a personal academic project. Dear PVS-Studio, please check it.
-// PVS-Studio Static Code Analyzer for C, C++, C#, and Java: https://pvs-studio.com
-// fork + shm + sem
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/mman.h>
-#include <sys/stat.h>  /* For mode constants */
-#include <fcntl.h>     /* For O_* constants */
+#include <sys/stat.h>
+#include <fcntl.h>
 #include <sys/wait.h>
-#include <semaphore.h> // Corrected include
-#include <unistd.h>    // Added for ftruncate
+#include <semaphore.h>
+#include <unistd.h>
 
 void *createSHM(char *name, size_t size, mode_t mode) {
     int fd; 
@@ -19,13 +16,11 @@ void *createSHM(char *name, size_t size, mode_t mode) {
         exit(EXIT_FAILURE);
     }
     
-    //int ftruncate(int fd, off_t length);
     if (-1 == ftruncate(fd, size)) {
         perror("ftruncate");
         exit(EXIT_FAILURE);
     }
-    
-    // void *mmap(void addr[.length], size_t length, int prot, int flags, int fd, off_t offset);
+
     void *p = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
     if (p == MAP_FAILED) {
         perror("mmap");
@@ -40,7 +35,6 @@ void eraseSHM(char *name) {
         exit(EXIT_FAILURE);
     }
 }
-
 
 void* openSHM(const char* name, int oflag, size_t *sizeOutput) {
     int fd = shm_open(name, oflag, 0);
@@ -57,9 +51,7 @@ void* openSHM(const char* name, int oflag, size_t *sizeOutput) {
     }
 
     *sizeOutput = st.st_size;
-
     int prot = (oflag & O_RDWR) ? (PROT_READ | PROT_WRITE) : PROT_READ;
-
     void* ptr = mmap(NULL, st.st_size, prot, MAP_SHARED, fd, 0);
     if (ptr == MAP_FAILED) {
         perror("mmap");

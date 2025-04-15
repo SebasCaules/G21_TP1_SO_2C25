@@ -5,11 +5,11 @@
 #include <semaphore.h>
 #include <stdbool.h>
 
-// Share memory names
+// Nombres de las memorias compartidas
 #define SHM_STATE "/game_state"
 #define SHM_SYNC "/game_sync"
 
-// Game constants
+// Constantes del juego
 #define HEIGHT 10
 #define WIDTH 10
 #define DELAY 200

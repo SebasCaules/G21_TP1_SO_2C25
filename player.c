@@ -1,5 +1,3 @@
-// This is a personal academic project. Dear PVS-Studio, please check it.
-// PVS-Studio Static Code Analyzer for C, C++, C#, and Java: https://pvs-studio.com
 #include <stdbool.h>
 #include <stdio.h>
 #include <time.h>
@@ -74,11 +72,8 @@ unsigned char calculateBestMove(PlayerState *player, GameState *state) {
     for(unsigned char dir = 0; dir < 8; dir++) {
         int newX, newY;
         positionAfterMove(dir, &newX, &newY, player->x, player->y);
-
         if(isValid(state, newX, newY)) {
             int score = evaluateCell(state, newX, newY);
-            //como bestScore arranca en -1 garantizo que aunque sea 1 movimiento va a ser el mejor
-            //y no va a quedar el -1
             if(score > bestScore) {
                 bestScore = score;
                 bestDirection = dir;
@@ -87,7 +82,6 @@ unsigned char calculateBestMove(PlayerState *player, GameState *state) {
     }
     return bestDirection;
 }
-
 
 int adjacentFreeCells(GameState *state, unsigned short x, unsigned short y) {
     int count = 0;
@@ -99,7 +93,6 @@ int adjacentFreeCells(GameState *state, unsigned short x, unsigned short y) {
             count++;
         }
     }
-
     return count;
 }
 
@@ -110,9 +103,7 @@ int riskFromEnemies(GameState *state, unsigned short x, unsigned short y) {
 
     for(int i = 0; i < state->numOfPlayers; i++) {
         enemy = state->players[i];
-
         distance = fmax(fabs(x - enemy.x), fabs(y - enemy.y));
-
         //si enemy es el mismo player no pasa nada, distance dara 0
         if(distance == 1) {
             risk += 2;
@@ -132,7 +123,6 @@ int evaluateCell(GameState *state, unsigned short x, unsigned short y) {
     int freeSpaces = adjacentFreeCells(state, x, y);
     int distanceToWall = calculateDistanceToWall(state, x, y);
     int risk = riskFromEnemies(state, x, y);
-
     return reward * 5 + freeSpaces * 2 - distanceToWall - risk;
 }
 

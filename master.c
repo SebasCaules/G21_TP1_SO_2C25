@@ -171,7 +171,6 @@ int main(int argc, char *argv[]) {
     }
 
     int status;
-
     if (viewPath != NULL) {
         pid_t pid = waitpid(view_pid, &status, 0);
         if (pid == -1) {
@@ -357,13 +356,11 @@ void fillBoard(GameState *state, unsigned int seed) {
 void processMovement(PlayerState *player, unsigned char moveRequest, GameState *state) {
     if (!player || player->isBlocked) return;
 
-
     int newX, newY, dx, dy;
     positionAfterMove(moveRequest, &newX, &newY, player->x, player->y);
     directionBreakdown(moveRequest, &dx, &dy);
 
     bool isValidMove = isValid(state, newX, newY);
-
     if (isValidMove) {
         player->score += state->board[newY * state->width + newX];
         player->x = newX;
@@ -387,7 +384,6 @@ void processMovement(PlayerState *player, unsigned char moveRequest, GameState *
             break;
         }
     }
-
     if (!canMove) {
         player->isBlocked = true;
     }
