@@ -82,11 +82,10 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    int player_pipes[MAX_PLAYERS]; // Guardar file descriptors para leer de los jugadores
+    int player_pipes[numOfPlayers][2]; // [read, write] para cada jugador
 
     for (int i = 0; i < numOfPlayers; i++) {
-        int pipefd[2];
-        if (pipe(pipefd) == -1) {
+        if (pipe(player_pipes[i]) == -1) {
             perror("pipe");
             exit(EXIT_FAILURE);
         }
@@ -94,9 +93,9 @@ int main(int argc, char *argv[]) {
         pid_t pid = fork();
         if (pid == 0) {
             // HIJO - jugador
-            close(pipefd[0]); // Cerramos lectura
-            dup2(pipefd[1], STDOUT_FILENO); // Redirigimos stdout al pipe
-            close(pipefd[1]); // Cerramos el original (ya está duplicado)
+            close(player_pipes[i][0]); // Cerramos lectura
+            dup2(player_pipes[i][1], STDOUT_FILENO); // Redirigimos stdout al pipe
+            close(player_pipes[i][1]); // Cerramos el original
 
             char *args[] = { playerPaths[i], width_str, height_str, NULL };
             execv(playerPaths[i], args);
@@ -107,9 +106,8 @@ int main(int argc, char *argv[]) {
             exit(EXIT_FAILURE);
         } else {
             // PADRE - máster
-            close(pipefd[1]); // No escribe, solo lee
+            close(player_pipes[i][1]); // No escribe, solo lee
             state->players[i].pid = pid; // Guardamos el PID del jugador
-            player_pipes[i] = pipefd[0]; // Guardamos el FD de lectura
         }
     }
 
@@ -134,7 +132,7 @@ int main(int argc, char *argv[]) {
                 callView(sync);
             }
             unsigned char move;
-            ssize_t bytesRead = read(player_pipes[i], &move, sizeof(move));
+            ssize_t bytesRead = read(player_pipes[i][0], &move, sizeof(move));
             if (bytesRead == sizeof(move)) {
                 sem_wait(&sync->gameStateMutex);
                 PlayerState *player = &state->players[i];
@@ -225,9 +223,13 @@ int main(int argc, char *argv[]) {
             printf("Player%s %s %sterminated abnormally\n", 
                 color, playerName, reset);
         }
-        // Cerramos el pipe de lectura
-        close(player_pipes[i]);
+        // Cerramos los pipes heredados 
+        for (size_t j = 0; j <= i; j++) {
+            close(player_pipes[j][0]);
+        }
     }
+    
+    
 
     printf("---------------------------------------------------------\n");
 
@@ -256,6 +258,10 @@ int main(int argc, char *argv[]) {
     // Borramos memorias compartidas
     eraseSHM(SHM_STATE);
     eraseSHM(SHM_SYNC);
+    closeSHM(state, sizeof(GameState) + width * height * sizeof(int));
+    closeSHM(sync, sizeof(Semaphores));
+
+    // sleep(1000);
     return 0;   
 }
 
